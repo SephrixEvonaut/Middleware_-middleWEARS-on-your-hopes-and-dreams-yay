@@ -59,6 +59,27 @@ export const devicesConfigSchema = z.object({
   fsrSensor: fsrSensorConfigSchema,
 });
 
+// Modifier State (Sticky Keys functionality)
+export const modifierStateSchema = z.object({
+  ctrl: z.boolean().default(false),
+  shift: z.boolean().default(false),
+  alt: z.boolean().default(false),
+});
+
+export type ModifierState = z.infer<typeof modifierStateSchema>;
+
+export const modifierModeSchema = z.enum([
+  "normal",
+  "ctrl",
+  "shift",
+  "alt",
+  "ctrl_shift",
+  "ctrl_alt",
+  "shift_alt",
+]);
+
+export type ModifierMode = z.infer<typeof modifierModeSchema>;
+
 // Gesture Types
 export const gestureTypeSchema = z.enum([
   "single_press",
@@ -69,6 +90,8 @@ export const gestureTypeSchema = z.enum([
   "cancel_and_hold",
   "charge_release",
 ]);
+
+export type GestureType = z.infer<typeof gestureTypeSchema>;
 
 // Input Mapping Schema
 export const inputMappingSchema = z.object({
@@ -99,6 +122,7 @@ export const profiles = pgTable("profiles", {
   }>(),
   gestureSettings: jsonb("gesture_settings").notNull().$type<z.infer<typeof gestureSettingsSchema>>(),
   inputMappings: jsonb("input_mappings").notNull().default([]).$type<z.infer<typeof inputMappingSchema>[]>(),
+  modifierDefaults: jsonb("modifier_defaults").notNull().default({ ctrl: false, shift: false, alt: false }).$type<ModifierState>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -109,6 +133,7 @@ export const insertProfileSchema = createInsertSchema(profiles, {
   devices: devicesConfigSchema,
   gestureSettings: gestureSettingsSchema,
   inputMappings: z.array(inputMappingSchema).default([]),
+  modifierDefaults: modifierStateSchema.default({ ctrl: false, shift: false, alt: false }),
 }).omit({
   id: true,
   createdAt: true,
@@ -124,6 +149,7 @@ export const profileSchema = z.object({
   devices: devicesConfigSchema,
   gestureSettings: gestureSettingsSchema,
   inputMappings: z.array(inputMappingSchema),
+  modifierDefaults: modifierStateSchema,
   createdAt: z.union([z.string(), z.date()]).optional(),
   updatedAt: z.union([z.string(), z.date()]).optional(),
 });

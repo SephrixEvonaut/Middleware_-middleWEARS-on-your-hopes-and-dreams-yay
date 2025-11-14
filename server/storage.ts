@@ -66,6 +66,11 @@ export class MemStorage implements IStorage {
         chargeMaxHold: 2000,
       },
       inputMappings: [],
+      modifierDefaults: {
+        ctrl: false,
+        shift: false,
+        alt: false,
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
