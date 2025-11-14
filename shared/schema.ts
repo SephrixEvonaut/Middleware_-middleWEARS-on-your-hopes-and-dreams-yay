@@ -75,6 +75,8 @@ export const inputMappingSchema = z.object({
   actionName: z.string(),
   actionDescription: z.string().optional(),
   priority: z.number().default(0),
+  canvasPosition: z.object({ x: z.number(), y: z.number() }).optional(),
+  actionSlot: z.number().optional(),
 });
 
 // Drizzle Profile Table

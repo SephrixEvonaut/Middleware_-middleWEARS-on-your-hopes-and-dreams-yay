@@ -240,9 +240,9 @@ export default function Home({
 
           <TabsContent value="map" data-testid="tab-content-map">
             <MappingDesigner
-              mappings={currentProfile.inputMappings}
-              onChange={(inputMappings) =>
-                handleProfileChange({ inputMappings })
+              profile={currentProfile}
+              onUpdate={(updatedProfile) =>
+                onProfileUpdate(updatedProfile)
               }
             />
           </TabsContent>
