@@ -1,0 +1,195 @@
+// 1. Raw Input Capture (lowest level)
+window.addEventListener('keydown', rawInputHandler, { capture: true });
+document.addEventListener('mousedown', rawMouseHandler, { capture: true });
+
+// 2. SharpKeys Translation Layer
+function handleSharpKeysSignal(event) {
+  // Intercept PC-level key remapping
+  // Research: Read Windows registry remapping
+  const translatedKey = translateSharpKeysInput(event.code);
+  return translatedKey;
+}
+
+// 3. Device-Specific Parser
+function parseDeviceInput(rawSignal) {
+  const deviceType = identifyDevice(rawSignal);
+  return deviceParsers[deviceType](rawSignal);
+}
+
+// 4. Gesture Recognition
+function detectGesturePattern(inputSequence, timeStamps) {
+  // Multi-press logic
+  // Long press detection
+  // Cancel-and-hold patterns
+}
+
+// 5. Action Mapper
+function mapToGameAction(gesture, context) {
+  // Output to game/application
+}
+
+// 6. Anti-Cheat Compliance Layer
+function validateOutputSequence(actions) {
+  // Ensure 1:1 input:output ratio
+  // No macro-like behavior
+}
+```
+
+---
+
+## React Component Structure
+```
+/src
+  /components
+    /DeviceConfig
+      - KeyboardSettings.jsx
+      - MouseSettings.jsx
+      - FSRCalibration.jsx
+      - GestureVisualizer.jsx
+    /GestureEditor
+      - PatternRecorder.jsx
+      - TimingAdjuster.jsx
+      - ActionMapper.jsx
+    /Dashboard
+      - InputMonitor.jsx (real-time visualization)
+      - ProfileManager.jsx
+      - ExportConfig.jsx
+  /middleware
+    - inputCapture.js
+    - gestureEngine.js
+    - deviceHandlers.js
+    - sharpKeysCompat.js
+  /utils
+    - fsrProcessor.js
+    - antiCheatValidator.js
+  /styles
+    - variables.css (all tweakable values)
+    - components.css
+
+CSS Variable System
+css/* styles/variables.css */
+:root {
+  /* Timing Variables */
+  --press-single-max: 80ms;
+  --press-long-min: 80ms;
+  --press-long-max: 140ms;
+  --multipress-window: 350ms;
+  --cancel-threshold: 200ms;
+  
+  /* Visual Feedback */
+  --input-active-color: #00ff88;
+  --gesture-detected-color: #ff6b00;
+  --fsr-pressure-gradient: linear-gradient(0deg, #0066ff, #ff00ff);
+  
+  /* Device Colors */
+  --keyboard-color: #4a90e2;
+  --mouse-color: #e24a4a;
+  --azeron-color: #9b59b6;
+  --fsr-color: #f39c12;
+}
+```
+
+---
+
+## Areas Requiring Personal Research
+
+### **1. SharpKeys Integration**
+- [ ] Windows Registry paths for key remapping (`HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Keyboard Layout`)
+- [ ] Scancode translation tables
+- [ ] Real-time registry monitoring in JavaScript/Node
+- [ ] Alternative: Read SharpKeys config files directly
+
+### **2. Device-Specific APIs**
+- [ ] **Azeron Cyborg**: HID protocol, button mapping, analog stick data
+- [ ] **Razer Synapse**: API access, macro detection limits
+- [ ] **Swiftpoint**: Tilt sensor ranges, gesture SDK
+- [ ] USB HID specifications for custom device detection
+
+### **3. FSR Sensor Integration**
+- [ ] Analog-to-digital conversion thresholds
+- [ ] Calibration algorithms (per-user pressure curves)
+- [ ] Drift compensation techniques
+- [ ] Hardware interface (Arduino/serial communication?)
+
+### **4. Anti-Cheat Compliance**
+- [ ] EasyAntiCheat guidelines for input devices
+- [ ] BattlEye virtual input restrictions
+- [ ] Vanguard (Riot) hardware requirements
+- [ ] Input timing randomization to appear human
+- [ ] 1:1 input validation (no macro behavior)
+
+### **5. Linux/Cross-Platform Support**
+- [ ] `evdev` interface for Linux input devices
+- [ ] `libusb` for direct USB communication
+- [ ] X11 vs Wayland input handling
+- [ ] Wine compatibility for gaming
+
+### **6. Accessibility Standards**
+- [ ] Tongue-controller protocols (IntegraMouse, etc.)
+- [ ] Sip-and-puff pressure sensor ranges
+- [ ] Switch-based input systems
+- [ ] Compliance with AT (Assistive Technology) standards
+
+### **7. Gesture Algorithm Optimization**
+- [ ] State machine design for multi-press detection
+- [ ] Debounce algorithms for FSR analog noise
+- [ ] Machine learning for personalized gesture recognition
+- [ ] Fuzzy matching for imprecise timing
+
+### **8. Replit Deployment Considerations**
+- [ ] WebUSB API limitations in browser
+- [ ] Node.js `node-hid` library for device access
+- [ ] Security policies for hardware access
+- [ ] Electron wrapper as alternative
+
+---
+
+## Technical Challenges & Solutions
+
+| Challenge | Solution Approach |
+|-----------|-------------------|
+| SharpKeys runs at OS level | Read registry on app start, maintain translation map |
+| Multiple simultaneous inputs | Event queue with timestamp-based deduplication |
+| FSR analog noise | Kalman filtering + hysteresis thresholds |
+| Anti-cheat detection | Ensure physical 1:1 press ratio, add random microtiming |
+| Cross-device timing sync | Centralized event loop with high-resolution timestamps |
+| Browser hardware access limits | Use Electron or native Node.js with `node-hid` |
+
+---
+
+## Frontend UI Features
+
+### **Configuration Dashboard:**
+- Real-time input visualization (colored circles for each button)
+- Gesture pattern recorder (visual timeline)
+- FSR pressure gauge (0-100% live display)
+- Profile switcher (game-specific configs)
+- Export to JSON (shareable configs)
+
+### **Gesture Training Mode:**
+- Record custom multi-press patterns
+- Adjust timing windows with sliders
+- Test patterns with visual feedback
+- Save to library
+
+### **Accessibility Mode:**
+- Simplified 1-2 button interfaces
+- Larger hit targets
+- Voice feedback option
+- Pressure sensitivity calibration wizard
+
+---
+
+## Quick Start Middleware Prompt
+```
+Build a React/Vite app with:
+1. Multi-device input capture (keyboard, mouse, gaming peripherals, FSR sensors)
+2. Gesture recognition engine (single/double/triple/quad press, long press, cancel-hold)
+3. Configurable timing windows (300-500ms multi-press, 80-140ms long press)
+4. SharpKeys compatibility layer for remapped keys
+5. Real-time input visualization dashboard
+6. Exportable JSON configs for game profiles
+7. Anti-cheat compliant output (1:1 input ratio)
+8. Accessibility features (pressure sensors, alternate input methods)
+9. All variables exposed in CSS/config files for easy tweaking
+10. Open-source architecture for community extensions
