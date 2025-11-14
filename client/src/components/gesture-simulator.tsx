@@ -19,6 +19,12 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   const [debugMode, setDebugMode] = useState(false);
   const [chargeLevel, setChargeLevel] = useState(0);
   
+  // Tap analytics state
+  const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+  const [currentTPS, setCurrentTPS] = useState(0);
+  const [peakTPS, setPeakTPS] = useState(0);
+  const [tapIntervals, setTapIntervals] = useState<number[]>([]);
+  
   // Use refs for timing-critical values to avoid stale closures
   const pressStartRef = useRef<number | null>(null);
   const lastPressRef = useRef<number>(0);
@@ -37,6 +43,18 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   useEffect(() => {
     debugModeRef.current = debugMode;
   }, [debugMode]);
+
+  // Calculate TPS from tap timestamps (rolling 1-second window)
+  useEffect(() => {
+    const now = Date.now();
+    const recentTaps = tapTimestamps.filter(t => now - t <= 1000);
+    const tps = recentTaps.length;
+    setCurrentTPS(tps);
+    
+    if (tps > peakTPS) {
+      setPeakTPS(tps);
+    }
+  }, [tapTimestamps, peakTPS]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -101,6 +119,20 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       }
     }
 
+    // Update tap analytics
+    setTapTimestamps(prev => {
+      const newTimestamps = [...prev, now];
+      // Keep only taps from last 1 second
+      return newTimestamps.filter(t => now - t <= 1000);
+    });
+    
+    // Calculate tap interval (guard against first tap with invalid timestamp)
+    if (lastPressRef.current > 0 && timeSinceLastPress < 10000) {
+      setTapIntervals(prev => {
+        return [...prev.slice(-9), timeSinceLastPress];
+      });
+    }
+    
     lastPressRef.current = now;
 
     const event: GestureEvent = {
@@ -224,6 +256,12 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     isPressedRef.current = false; // Update ref synchronously
     setIsPressed(false);
     pressStartRef.current = null;
+    lastPressRef.current = 0; // Reset for clean analytics baseline
+    // Reset tap analytics
+    setTapTimestamps([]);
+    setCurrentTPS(0);
+    setPeakTPS(0);
+    setTapIntervals([]);
     if (timerRef.current) clearTimeout(timerRef.current);
   };
 
@@ -399,6 +437,61 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
               style={{ right: `${100 - (settings.longPressMax / 10)}%`, width: "1px" }}
             />
           </div>
+        </div>
+
+        {/* Tap Analytics */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Tap Analytics</h4>
+            <Badge variant="outline" className="text-xs font-mono" data-testid="badge-analytics-disclaimer">
+              Detection Only - No Automation
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 bg-muted/20 rounded-md border border-border" data-testid="display-current-tps">
+              <div className="text-xs text-muted-foreground mb-1">Current TPS</div>
+              <div className="text-2xl font-mono font-bold text-foreground">{currentTPS}</div>
+              <div className="text-xs text-muted-foreground mt-1">Taps/sec</div>
+            </div>
+            
+            <div className="p-3 bg-muted/20 rounded-md border border-border" data-testid="display-peak-tps">
+              <div className="text-xs text-muted-foreground mb-1">Peak TPS</div>
+              <div className="text-2xl font-mono font-bold text-chart-3">{peakTPS}</div>
+              <div className="text-xs text-muted-foreground mt-1">Record</div>
+            </div>
+            
+            <div className="p-3 bg-muted/20 rounded-md border border-border" data-testid="display-avg-interval">
+              <div className="text-xs text-muted-foreground mb-1">Avg Interval</div>
+              <div className="text-2xl font-mono font-bold text-chart-5">
+                {tapIntervals.length > 0 ? Math.round(tapIntervals.reduce((a, b) => a + b, 0) / tapIntervals.length) : 0}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">ms</div>
+            </div>
+          </div>
+          
+          {tapIntervals.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground">Recent Tap Intervals (ms)</div>
+              <div className="flex gap-1 h-16 items-end" data-testid="tap-interval-bars">
+                {tapIntervals.slice(-10).map((interval, index) => {
+                  const maxInterval = Math.max(...tapIntervals.slice(-10));
+                  const heightPercent = maxInterval > 0 ? (interval / maxInterval) * 100 : 0;
+                  
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                      <div
+                        className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all"
+                        style={{ height: `${heightPercent}%`, minHeight: "8px" }}
+                        data-testid={`interval-bar-${index}`}
+                      />
+                      <span className="text-xs font-mono text-muted-foreground">{interval}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Event History */}
