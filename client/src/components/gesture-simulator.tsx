@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Activity, RotateCcw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Activity, RotateCcw, Bug } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import type { GestureSettings, GestureType, GestureEvent } from "@shared/schema";
 
@@ -15,13 +16,30 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   const [currentDuration, setCurrentDuration] = useState(0);
   const [detectedGesture, setDetectedGesture] = useState<GestureType | null>(null);
   const [isPressed, setIsPressed] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  
+  // Use refs for timing-critical values to avoid stale closures
   const pressStartRef = useRef<number | null>(null);
   const lastPressRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPressedRef = useRef<boolean>(false);
+  const pressCountRef = useRef<number>(0);
+  const lastDebounceRef = useRef<number>(0);
+  const settingsRef = useRef<GestureSettings>(settings);
+  const debugModeRef = useRef<boolean>(debugMode);
+
+  // Sync refs with props (state refs are updated synchronously in handlers)
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    debugModeRef.current = debugMode;
+  }, [debugMode]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat || isPressed) return;
+      if (e.repeat || isPressedRef.current) return;
       if (e.code === "Space") {
         e.preventDefault();
         handlePress();
@@ -43,19 +61,43 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       window.removeEventListener("keyup", handleKeyUp);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPressed]);
+  }, []); // Empty dependency array - register once
 
   const handlePress = () => {
     const now = Date.now();
+    const currentSettings = settingsRef.current;
+    const currentDebugMode = debugModeRef.current;
+    
+    // Apply debounce delay
+    const timeSinceLastDebounce = now - lastDebounceRef.current;
+    if (timeSinceLastDebounce < currentSettings.debounceDelay) {
+      if (currentDebugMode) {
+        console.log(`[DEBOUNCE] Event suppressed - ${timeSinceLastDebounce}ms since last event (threshold: ${currentSettings.debounceDelay}ms)`);
+      }
+      return; // Suppress this event due to debounce
+    }
+    lastDebounceRef.current = now;
+    
+    isPressedRef.current = true; // Update ref synchronously
     setIsPressed(true);
     pressStartRef.current = now;
 
     const timeSinceLastPress = now - lastPressRef.current;
     
-    if (timeSinceLastPress < settings.multiPressWindow && pressCount < 4) {
-      setPressCount(prev => prev + 1);
+    // Use ref to get current count to avoid stale closure
+    if (timeSinceLastPress < currentSettings.multiPressWindow && pressCountRef.current < 4) {
+      const newCount = pressCountRef.current + 1;
+      pressCountRef.current = newCount; // Update ref synchronously
+      setPressCount(newCount);
+      if (currentDebugMode) {
+        console.log(`[PRESS] Multi-press detected - Count: ${newCount}, Time since last: ${timeSinceLastPress}ms`);
+      }
     } else {
+      pressCountRef.current = 1; // Update ref synchronously
       setPressCount(1);
+      if (currentDebugMode) {
+        console.log(`[PRESS] New press sequence started - Time since last: ${timeSinceLastPress}ms`);
+      }
     }
 
     lastPressRef.current = now;
@@ -72,17 +114,27 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     
     const now = Date.now();
     const duration = now - pressStartRef.current;
+    const currentSettings = settingsRef.current;
+    const currentDebugMode = debugModeRef.current;
+    
+    isPressedRef.current = false; // Update ref synchronously
     setIsPressed(false);
     setCurrentDuration(0);
     pressStartRef.current = null;
 
     let gesture: GestureType | null = null;
 
-    if (duration >= settings.longPressMin && duration <= settings.longPressMax) {
+    if (duration >= currentSettings.longPressMin && duration <= currentSettings.longPressMax) {
       gesture = "long_press";
+      pressCountRef.current = 0; // Update ref synchronously
       setPressCount(0);
-    } else if (duration < settings.longPressMin) {
-      switch (pressCount) {
+      if (currentDebugMode) {
+        console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
+      }
+    } else if (duration < currentSettings.longPressMin) {
+      // Use ref to get current count to avoid stale closure
+      const currentCount = pressCountRef.current;
+      switch (currentCount) {
         case 1:
           gesture = "single_press";
           break;
@@ -97,10 +149,22 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
           break;
       }
       
+      if (currentDebugMode) {
+        console.log(`[RELEASE] ${gesture || 'No gesture'} detected - Duration: ${duration}ms, Press count: ${currentCount}`);
+      }
+      
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
+        pressCountRef.current = 0; // Update ref synchronously
         setPressCount(0);
-      }, settings.multiPressWindow);
+      }, currentSettings.multiPressWindow);
+    } else {
+      // Duration exceeded longPressMax - reset count to prevent false multi-press on next tap
+      pressCountRef.current = 0;
+      setPressCount(0);
+      if (currentDebugMode) {
+        console.log(`[RELEASE] Duration ${duration}ms exceeds longPressMax (${currentSettings.longPressMax}ms) - No gesture detected, count reset`);
+      }
     }
 
     if (gesture) {
@@ -131,9 +195,11 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
 
   const reset = () => {
     setEvents([]);
+    pressCountRef.current = 0; // Update ref synchronously
     setPressCount(0);
     setCurrentDuration(0);
     setDetectedGesture(null);
+    isPressedRef.current = false; // Update ref synchronously
     setIsPressed(false);
     pressStartRef.current = null;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -164,15 +230,26 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
               <CardDescription className="text-sm">Press SPACE to test gesture detection</CardDescription>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={reset}
-            data-testid="button-reset-simulator"
-          >
-            <RotateCcw className="w-3 h-3 mr-2" />
-            Reset
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Bug className="w-4 h-4 text-muted-foreground" />
+              <Switch
+                checked={debugMode}
+                onCheckedChange={setDebugMode}
+                data-testid="switch-debug-mode"
+              />
+              <span className="text-xs text-muted-foreground">Debug</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={reset}
+              data-testid="button-reset-simulator"
+            >
+              <RotateCcw className="w-3 h-3 mr-2" />
+              Reset
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
@@ -186,8 +263,15 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
               </Badge>
             )}
             {isPressed && (
-              <div className="text-2xl font-mono text-muted-foreground" data-testid="text-current-duration">
-                {currentDuration}ms
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-2xl font-mono text-muted-foreground" data-testid="text-current-duration">
+                  {currentDuration}ms
+                </div>
+                {currentDuration >= settings.longPressMin && currentDuration <= settings.longPressMax && (
+                  <Badge variant="default" className="text-xs bg-chart-5" data-testid="badge-in-long-press-window">
+                    In Long Press Window
+                  </Badge>
+                )}
               </div>
             )}
           </div>

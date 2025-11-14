@@ -6,8 +6,8 @@ import { z } from "zod";
 // Gesture Settings Schema
 export const gestureSettingsSchema = z.object({
   multiPressWindow: z.number().min(100).max(1000).default(350),
-  longPressMin: z.number().min(50).max(200).default(80),
-  longPressMax: z.number().min(100).max(300).default(140),
+  longPressMin: z.number().min(50).max(500).default(150),
+  longPressMax: z.number().min(100).max(1000).default(500),
   cancelThreshold: z.number().min(100).max(500).default(200),
   debounceDelay: z.number().min(0).max(50).default(10),
 });
