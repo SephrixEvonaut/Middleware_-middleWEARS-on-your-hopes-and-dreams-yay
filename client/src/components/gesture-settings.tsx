@@ -138,6 +138,58 @@ export function GestureSettingsComponent({ settings, onChange }: GestureSettings
             Hardware signal stabilization delay
           </p>
         </div>
+
+        <div className="pt-4 border-t border-border">
+          <h3 className="text-sm font-medium mb-4 text-violet-500">Charge-Release Settings</h3>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="charge-min-hold" className="text-sm font-medium">
+                Charge Minimum Hold
+              </Label>
+              <span className="text-xs font-mono text-muted-foreground">{settings.chargeMinHold}ms</span>
+            </div>
+            <div data-testid="slider-wrapper-charge-min-hold">
+              <Slider
+                id="charge-min-hold"
+                min={100}
+                max={1000}
+                step={50}
+                value={[settings.chargeMinHold]}
+                onValueChange={([chargeMinHold]) => onChange({ ...settings, chargeMinHold })}
+                data-testid="slider-charge-min-hold"
+                className="w-full"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Minimum hold time to start charging (0% charge)
+            </p>
+          </div>
+
+          <div className="space-y-3 mt-6">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="charge-max-hold" className="text-sm font-medium">
+                Charge Maximum Hold
+              </Label>
+              <span className="text-xs font-mono text-muted-foreground">{settings.chargeMaxHold}ms</span>
+            </div>
+            <div data-testid="slider-wrapper-charge-max-hold">
+              <Slider
+                id="charge-max-hold"
+                min={500}
+                max={5000}
+                step={100}
+                value={[settings.chargeMaxHold]}
+                onValueChange={([chargeMaxHold]) => onChange({ ...settings, chargeMaxHold })}
+                data-testid="slider-charge-max-hold"
+                className="w-full"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Maximum hold time for full charge (100% charge)
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

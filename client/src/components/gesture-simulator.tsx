@@ -17,6 +17,7 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   const [detectedGesture, setDetectedGesture] = useState<GestureType | null>(null);
   const [isPressed, setIsPressed] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [chargeLevel, setChargeLevel] = useState(0);
   
   // Use refs for timing-critical values to avoid stale closures
   const pressStartRef = useRef<number | null>(null);
@@ -123,15 +124,30 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     pressStartRef.current = null;
 
     let gesture: GestureType | null = null;
+    let detectedChargeLevel = 0;
 
-    if (duration >= currentSettings.longPressMin && duration <= currentSettings.longPressMax) {
+    // Check for Charge-Release gesture (priority before long press)
+    if (duration >= currentSettings.chargeMinHold && duration <= currentSettings.chargeMaxHold) {
+      gesture = "charge_release";
+      const chargeDuration = duration - currentSettings.chargeMinHold;
+      const chargeWindow = currentSettings.chargeMaxHold - currentSettings.chargeMinHold;
+      detectedChargeLevel = Math.round((chargeDuration / chargeWindow) * 100);
+      setChargeLevel(detectedChargeLevel);
+      pressCountRef.current = 0;
+      setPressCount(0);
+      if (currentDebugMode) {
+        console.log(`[RELEASE] Charge-Release detected - Duration: ${duration}ms, Charge: ${detectedChargeLevel}% (${currentSettings.chargeMinHold}-${currentSettings.chargeMaxHold}ms window)`);
+      }
+    } else if (duration >= currentSettings.longPressMin && duration <= currentSettings.longPressMax) {
       gesture = "long_press";
       pressCountRef.current = 0; // Update ref synchronously
       setPressCount(0);
+      setChargeLevel(0);
       if (currentDebugMode) {
         console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
       }
     } else if (duration < currentSettings.longPressMin) {
+      setChargeLevel(0);
       // Use ref to get current count to avoid stale closure
       const currentCount = pressCountRef.current;
       switch (currentCount) {
@@ -159,17 +175,21 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
         setPressCount(0);
       }, currentSettings.multiPressWindow);
     } else {
-      // Duration exceeded longPressMax - reset count to prevent false multi-press on next tap
+      // Duration exceeded chargeMaxHold - reset everything
       pressCountRef.current = 0;
       setPressCount(0);
+      setChargeLevel(0);
       if (currentDebugMode) {
-        console.log(`[RELEASE] Duration ${duration}ms exceeds longPressMax (${currentSettings.longPressMax}ms) - No gesture detected, count reset`);
+        console.log(`[RELEASE] Duration ${duration}ms exceeds chargeMaxHold (${currentSettings.chargeMaxHold}ms) - No gesture detected, count reset`);
       }
     }
 
     if (gesture) {
       setDetectedGesture(gesture);
-      setTimeout(() => setDetectedGesture(null), 2000);
+      setTimeout(() => {
+        setDetectedGesture(null);
+        setChargeLevel(0);
+      }, 2000);
     }
 
     const event: GestureEvent = {
@@ -177,6 +197,7 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       type: "release",
       duration,
       detected: gesture || undefined,
+      chargeLevel: detectedChargeLevel || undefined,
     };
     setEvents(prev => [...prev.slice(-9), event]);
   };
@@ -199,6 +220,7 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     setPressCount(0);
     setCurrentDuration(0);
     setDetectedGesture(null);
+    setChargeLevel(0);
     isPressedRef.current = false; // Update ref synchronously
     setIsPressed(false);
     pressStartRef.current = null;
@@ -213,9 +235,21 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       quadruple_press: "bg-chart-4",
       long_press: "bg-chart-5",
       cancel_and_hold: "bg-destructive",
+      charge_release: "bg-violet-500",
     };
     return colors[gesture] || "bg-muted";
   };
+
+  // Calculate current charge level based on hold duration
+  const getCurrentChargeLevel = () => {
+    if (!isPressed || currentDuration < settings.chargeMinHold) return 0;
+    if (currentDuration > settings.chargeMaxHold) return 100;
+    const chargeDuration = currentDuration - settings.chargeMinHold;
+    const chargeWindow = settings.chargeMaxHold - settings.chargeMinHold;
+    return Math.round((chargeDuration / chargeWindow) * 100);
+  };
+
+  const currentChargeLevel = isPressed ? getCurrentChargeLevel() : chargeLevel;
 
   return (
     <Card className="border-card-border" data-testid="card-gesture-simulator">
@@ -272,18 +306,51 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
                     In Long Press Window
                   </Badge>
                 )}
+                {currentDuration >= settings.chargeMinHold && currentDuration <= settings.chargeMaxHold && (
+                  <Badge variant="default" className="text-xs bg-violet-500" data-testid="badge-in-charge-window">
+                    Charging: {currentChargeLevel}%
+                  </Badge>
+                )}
               </div>
             )}
           </div>
+
+          {/* Charge Bar */}
+          {(currentChargeLevel > 0 || (isPressed && currentDuration >= settings.chargeMinHold)) && (
+            <div className="w-full max-w-md mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted-foreground">Charge Level</span>
+                <span className="text-xs font-mono text-muted-foreground">{currentChargeLevel}%</span>
+              </div>
+              <div className="w-full h-3 bg-muted rounded-full overflow-hidden border border-border">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-400 to-violet-600 transition-all duration-100"
+                  style={{ width: `${currentChargeLevel}%` }}
+                  data-testid="charge-bar-fill"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                <span>{settings.chargeMinHold}ms</span>
+                <span>{settings.chargeMaxHold}ms</span>
+              </div>
+            </div>
+          )}
           
           {detectedGesture && (
-            <Badge
-              variant="default"
-              className={`text-base px-4 py-2 capitalize animate-in fade-in zoom-in ${getGestureColor(detectedGesture)}`}
-              data-testid="badge-detected-gesture"
-            >
-              {detectedGesture.replace(/_/g, " ")}
-            </Badge>
+            <div className="flex flex-col items-center gap-2">
+              <Badge
+                variant="default"
+                className={`text-base px-4 py-2 capitalize animate-in fade-in zoom-in ${getGestureColor(detectedGesture)}`}
+                data-testid="badge-detected-gesture"
+              >
+                {detectedGesture.replace(/_/g, " ")}
+              </Badge>
+              {detectedGesture === "charge_release" && chargeLevel > 0 && (
+                <span className="text-sm text-muted-foreground font-mono" data-testid="text-charge-level">
+                  Released at {chargeLevel}% charge
+                </span>
+              )}
+            </div>
           )}
           
           {!isPressed && !detectedGesture && pressCount === 0 && (
@@ -354,9 +421,14 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
                   <span className="font-mono">{event.duration}ms</span>
                 )}
                 {event.detected && (
-                  <Badge variant="default" className="capitalize">
-                    {event.detected.replace(/_/g, " ")}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="capitalize">
+                      {event.detected.replace(/_/g, " ")}
+                    </Badge>
+                    {event.detected === "charge_release" && event.chargeLevel !== undefined && (
+                      <span className="font-mono text-violet-500">{event.chargeLevel}%</span>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

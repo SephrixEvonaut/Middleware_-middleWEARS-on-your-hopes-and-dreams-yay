@@ -47,6 +47,7 @@ const gestureLabels: Record<GestureType, string> = {
   quadruple_press: "Quad",
   long_press: "Long",
   cancel_and_hold: "Cancel & Hold",
+  charge_release: "Charge",
 };
 
 export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {

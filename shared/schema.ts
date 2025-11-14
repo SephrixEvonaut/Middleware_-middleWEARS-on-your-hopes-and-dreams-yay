@@ -10,6 +10,9 @@ export const gestureSettingsSchema = z.object({
   longPressMax: z.number().min(100).max(1000).default(500),
   cancelThreshold: z.number().min(100).max(500).default(200),
   debounceDelay: z.number().min(0).max(50).default(10),
+  // Charge-Release Settings
+  chargeMinHold: z.number().min(100).max(1000).default(300),
+  chargeMaxHold: z.number().min(500).max(5000).default(2000),
 });
 
 // Device Configurations
@@ -64,6 +67,7 @@ export const gestureTypeSchema = z.enum([
   "quadruple_press",
   "long_press",
   "cancel_and_hold",
+  "charge_release",
 ]);
 
 // Input Mapping Schema
@@ -77,6 +81,7 @@ export const inputMappingSchema = z.object({
   priority: z.number().default(0),
   canvasPosition: z.object({ x: z.number(), y: z.number() }).optional(),
   actionSlot: z.number().optional(),
+  chargeLevel: z.number().min(0).max(100).optional(), // For charge_release gesture
 });
 
 // Drizzle Profile Table
@@ -141,6 +146,7 @@ export const gestureEventSchema = z.object({
   type: z.enum(["press", "release"]),
   duration: z.number().optional(),
   detected: gestureTypeSchema.optional(),
+  chargeLevel: z.number().min(0).max(100).optional(), // For charge_release tracking
 });
 
 export type GestureEvent = z.infer<typeof gestureEventSchema>;

@@ -22,7 +22,7 @@ export class MemStorage implements IStorage {
     const defaultProfile: Profile = {
       id: "default-profile",
       name: "Default Profile",
-      description: "Standard gaming configuration",
+      description: "Standard gaming configuration" as string | null,
       favorite: false,
       devices: {
         keyboard: {
@@ -62,6 +62,8 @@ export class MemStorage implements IStorage {
         longPressMax: 140,
         cancelThreshold: 200,
         debounceDelay: 10,
+        chargeMinHold: 300,
+        chargeMaxHold: 2000,
       },
       inputMappings: [],
       createdAt: new Date(),
@@ -83,6 +85,8 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const profile: Profile = {
       ...insertProfile,
+      description: insertProfile.description ?? null,
+      favorite: insertProfile.favorite ?? false,
       id,
       createdAt: now,
       updatedAt: now,
