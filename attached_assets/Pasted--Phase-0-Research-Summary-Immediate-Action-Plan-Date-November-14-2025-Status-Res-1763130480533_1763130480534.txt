@@ -1,0 +1,500 @@
+# Phase 0 Research Summary & Immediate Action Plan
+
+**Date:** November 14, 2025  
+**Status:** Research Complete ✅ | Ready for Implementation  
+**Next Phase:** Begin Phase 1 (Raw Input MVP)
+
+---
+
+## 🎯 Executive Summary
+
+Your hardware middleware integration project is **FEASIBLE and SAFE** to proceed. Research confirms:
+
+✅ **Technical Approach:** Native Node.js + C++ Raw Input addon  
+✅ **Anti-Cheat Risk:** LOW (if 1:1 ratio maintained)  
+✅ **Latency Target:** 3-5ms achievable (well within 10ms budget)  
+✅ **Deployment:** Windows service with USB HID support
+
+---
+
+## 📊 Key Research Findings
+
+### 1. Runtime Environment: Native Node.js Service
+
+**DECISION: ACCEPTED**
+
+**Architecture:**
+```
+Windows Service (Node.js)
+  ├─> C++ N-API Addon (Windows Raw Input API)
+  ├─> node-hid (Azeron, Razer, Swiftpoint HID)
+  ├─> SharpKeys Translator (registry scan)
+  └─> Gesture Detection Engine (JavaScript)
+```
+
+**Why this approach:**
+- ✅ Only solution that captures both Raw Input AND USB HID
+- ✅ Latency: 3-5ms (vs 25-70ms for browser, 10-20ms for Electron)
+- ✅ Anti-cheat safe: appears as legitimate input driver
+- ✅ Can upgrade to kernel driver later if needed
+
+**Alternatives rejected:**
+- ❌ Browser WebHID: Can't access Raw Input API (fatal flaw)
+- ❌ Electron + node-hid: Still needs C++ addon, adds unnecessary overhead
+
+---
+
+### 2. Anti-Cheat Compliance: 1:1 Ratio is KEY
+
+**DECISION: ACCEPTED with Hard Rules**
+
+**✅ SAFE PRACTICES:**
+- Maintain **1:1 input/output ratio** (one button press = one key output)
+- Add **1-5ms random jitter** to appear human
+- Use **Raw Input API** (read-only, like game engines)
+- Each input tied to **physical device ID**
+- Complete **audit trail** for dispute resolution
+
+**❌ BANNED PRACTICES:**
+- 1:N macros (one button → multiple keys)
+- Software injection (SendInput, keybd_event)
+- Frame-perfect timing (0ms variance)
+- Memory manipulation
+
+**Research Sources:**
+- Riot Vanguard: Kernel-level driver, detects macros via timing analysis
+- EasyAntiCheat: Blocks software macros, allows hardware remapping
+- Hardware devices: Firmware-level macros harder to detect
+
+**YOUR STRATEGY:**  
+Operate as a **hardware translator**, not a cheat. Think: "Azeron with smart firmware."
+
+---
+
+### 3. SharpKeys Integration: Startup Scan
+
+**DECISION: ACCEPTED**
+
+**Implementation:**
+- Read registry at startup: `HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout\Scancode Map`
+- Parse binary format (4-byte entries: target scancode, source scancode)
+- O(1) translation via Map lookup (<0.1ms latency)
+- Graceful fallback if no admin access
+
+**Example:**
+```javascript
+const translator = new SharpKeysTranslator();
+await translator.loadMappings();
+
+// In input handler
+const remappedScancode = translator.translate(rawScancode);
+// CapsLock (0x3A) → Left Ctrl (0x1D) if remapped
+```
+
+**Why startup scan:**
+- Registry changes require Windows reboot anyway
+- Zero runtime overhead
+- Simple implementation
+
+---
+
+## 🚀 IMMEDIATE NEXT STEPS (Week 1-2)
+
+### Step 1: Set Up Development Environment
+
+**Install Required Tools:**
+```bash
+# Node.js with node-gyp
+npm install -g node-gyp
+
+# Windows Build Tools (one-time)
+npm install -g windows-build-tools
+
+# Visual Studio Build Tools
+# Download from: visualstudio.microsoft.com/downloads
+# Select: "Desktop development with C++"
+```
+
+**Create Project Structure:**
+```bash
+mkdir middleware
+cd middleware
+npm init -y
+
+# Install dependencies
+npm install winreg          # SharpKeys registry reading
+npm install node-hid         # USB HID devices
+npm install --save-dev @types/node
+```
+
+### Step 2: Implement SharpKeys Translator (Day 1-2)
+
+**File:** `middleware/src/sharpKeysTranslator.ts`
+
+**Priority:** HIGH (quick win, easy to test)
+
+```typescript
+import Registry from 'winreg';
+
+export class SharpKeysTranslator {
+  private mappings: Map<number, number> = new Map();
+  
+  async loadMappings(): Promise<void> {
+    const regKey = new Registry({
+      hive: Registry.HKLM,
+      key: '\\SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout'
+    });
+    
+    return new Promise((resolve, reject) => {
+      regKey.get('Scancode Map', (err, item) => {
+        if (err) {
+          console.log('No SharpKeys mappings (OK)');
+          resolve();
+          return;
+        }
+        
+        const buffer = Buffer.from(item.value, 'hex');
+        this.mappings = this.parseBuffer(buffer);
+        console.log(`Loaded ${this.mappings.size} mappings`);
+        resolve();
+      });
+    });
+  }
+  
+  private parseBuffer(buffer: Buffer): Map<number, number> {
+    const mappings = new Map<number, number>();
+    const numMappings = buffer.readUInt32LE(8);
+    
+    for (let i = 0; i < numMappings - 1; i++) {
+      const offset = 12 + (i * 4);
+      const target = buffer.readUInt16LE(offset);
+      const source = buffer.readUInt16LE(offset + 2);
+      mappings.set(source, target);
+    }
+    
+    return mappings;
+  }
+  
+  translate(scancode: number): number {
+    return this.mappings.get(scancode) ?? scancode;
+  }
+}
+```
+
+**Test:**
+```typescript
+// test.ts
+const translator = new SharpKeysTranslator();
+await translator.loadMappings();
+console.log(translator.translate(0x3A)); // Test CapsLock
+```
+
+### Step 3: Stub Out Raw Input Addon (Day 3-5)
+
+**File:** `middleware/binding.gyp`
+
+```json
+{
+  "targets": [
+    {
+      "target_name": "rawinput",
+      "sources": [ "src/native/rawinput.cc" ],
+      "include_dirs": [
+        "<!@(node -p \"require('node-addon-api').include\")"
+      ],
+      "dependencies": [
+        "<!(node -p \"require('node-addon-api').gyp\")"
+      ],
+      "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ]
+    }
+  ]
+}
+```
+
+**File:** `middleware/src/native/rawinput.cc`
+
+```cpp
+#include <napi.h>
+#include <windows.h>
+
+// Placeholder - implement in Phase 1
+Napi::Value StartCapture(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  // TODO: Register Raw Input devices
+  return Napi::String::New(env, "Capture started");
+}
+
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  exports.Set("startCapture", Napi::Function::New(env, StartCapture));
+  return exports;
+}
+
+NODE_API_MODULE(rawinput, Init)
+```
+
+**Build:**
+```bash
+node-gyp configure
+node-gyp build
+```
+
+### Step 4: Create Project Roadmap Document (Day 6-7)
+
+**File:** `docs/DECISIONS.md` (use template from earlier)
+
+**Fill out:**
+- Decision 1: Native Node.js Service (ACCEPTED)
+- Decision 2: Anti-Cheat Compliance Strategy (1:1 ratio)
+- Decision 3: SharpKeys Integration (startup scan)
+
+---
+
+## 📋 Week 1 Deliverables Checklist
+
+- [ ] Project structure created
+- [ ] Dependencies installed (winreg, node-hid)
+- [ ] SharpKeysTranslator implemented and tested
+- [ ] Raw Input addon compiles (stub)
+- [ ] DECISIONS.md documented
+- [ ] Git repository initialized
+- [ ] README.md with setup instructions
+
+---
+
+## 🎯 Phase 1 Preview (Weeks 2-4)
+
+Once Week 1 foundation is complete, Phase 1 will implement:
+
+### Core Components
+
+**1. Raw Input Capture (C++)**
+- Register for WM_INPUT messages (keyboard + mouse)
+- Parse RAWINPUT structures
+- Extract scancode, timestamp, device ID
+- Emit events to JavaScript
+
+**2. Event Pipeline (JavaScript)**
+```javascript
+RawInput (C++) → SharpKeys Translation → Gesture Detection → Output
+```
+
+**3. Latency Measurement**
+- High-resolution timer (performance.now())
+- Log input→output latency
+- Target: <5ms average
+
+**4. Device Identification**
+- VID/PID extraction from Raw Input
+- Device registry (Azeron, Razer, etc.)
+- Per-device gesture profiles
+
+---
+
+## 🔬 Device-Specific Research (Phase 2 Prep)
+
+While implementing Phase 1, research these in parallel:
+
+### Azeron Cyborg
+- **Finding:** Uses USB HID keyboard + analog joystick
+- **Status:** Standard HID, well-supported by node-hid
+- **VID/PID:** Check Device Manager (needs verification)
+- **Next:** Test with node-hid, parse HID reports
+
+### Razer Naga (12-button MMO mouse)
+- **Finding:** Standard mouse with extra buttons (HID)
+- **Status:** Buttons report as standard mouse buttons
+- **Next:** Test button IDs (likely button 6-17)
+
+### Swiftpoint (tilt sensors)
+- **Finding:** Custom HID reports for tilt axes
+- **Status:** May need HID descriptor parsing
+- **Next:** Analyze HID report descriptor
+
+### FSR Sensors (Arduino)
+- **Options:**
+  1. Arduino USB Serial (simple, higher latency)
+  2. Custom USB HID device (faster, more complex)
+- **Next:** Prototype both approaches
+
+---
+
+## 📚 Documentation Status
+
+**✅ Complete:**
+- Phase 0: Runtime Environment Research
+- Phase 0: Anti-Cheat Policy Research
+- Phase 0: SharpKeys Integration Research
+
+**⏳ In Progress:**
+- DECISIONS.md (fill in after Week 1)
+
+**🔜 Next:**
+- Phase 1: Raw Input API Implementation Guide
+- Phase 2: Device Parser Development Guide
+- Phase 3: Anti-Cheat Compliance Testing Protocol
+
+---
+
+## 🎓 Learning Resources
+
+If you need to ramp up on specific topics:
+
+### C++ N-API
+- Official: https://nodejs.org/api/n-api.html
+- Examples: https://github.com/nodejs/node-addon-examples
+
+### Windows Raw Input API
+- MSDN: https://video2.skills-academy.com/en-us/windows/win32/inputdev/raw-input
+- Gaming examples: search GitHub for "raw input game engine"
+
+### USB HID Protocol
+- USB.org specs: https://www.usb.org/hid
+- Reverse engineering: Wireshark USB capture
+
+### Anti-Cheat Systems
+- Community forums: unknowncheats.me (read only, for research)
+- GDC talks: "Fighting Cheaters in Online Games"
+
+---
+
+## ⚠️ Risk Mitigation
+
+### Top Risks & Mitigations
+
+**Risk 1: C++ Development Complexity**
+- **Mitigation:** Start with minimal stub, iterate slowly
+- **Fallback:** Use FFI-NAPI (slower but easier)
+
+**Risk 2: Anti-Cheat False Positive**
+- **Mitigation:** Test with secondary account, implement 1:1 validation
+- **Fallback:** Add appeal documentation
+
+**Risk 3: Device Compatibility**
+- **Mitigation:** Start with standard keyboard, add devices incrementally
+- **Fallback:** User can remap via device software
+
+**Risk 4: Latency Budget Exceeded**
+- **Mitigation:** Profile early, optimize hot paths
+- **Fallback:** Reduce gesture complexity
+
+---
+
+## 📊 Success Metrics
+
+### Phase 1 Success Criteria
+- [ ] Raw Input capturing keyboard events
+- [ ] Latency <10ms (measured)
+- [ ] SharpKeys translation working
+- [ ] Zero crashes over 24-hour test
+
+### Phase 2 Success Criteria
+- [ ] All 5 devices parsing correctly
+- [ ] Azeron buttons mapped
+- [ ] Razer side buttons detected
+- [ ] FSR sensors reading analog values
+
+### Phase 3 Success Criteria
+- [ ] 1:1 ratio validated in tests
+- [ ] No bans in 30-day beta (10+ users)
+- [ ] Audit logs exportable
+- [ ] User guide complete
+
+---
+
+## 🚦 Go/No-Go Decision Points
+
+### After Week 2 (Raw Input Prototype)
+**Question:** Can we capture keyboard input with <10ms latency?
+- **YES:** Continue to full implementation
+- **NO:** Reassess approach (maybe GameInput API?)
+
+### After Week 4 (Phase 1 Complete)
+**Question:** Is the core input pipeline stable?
+- **YES:** Begin Phase 2 (device parsers)
+- **NO:** Debug and stabilize before adding complexity
+
+### After Week 8 (Phase 2 Complete)
+**Question:** Do all devices parse correctly?
+- **YES:** Begin Phase 3 (anti-cheat testing)
+- **NO:** Reduce device scope, focus on Azeron only
+
+---
+
+## 💬 Daily Standup Template
+
+Use this to track progress:
+
+```
+Date: [Today]
+Yesterday: [Completed SharpKeys translator]
+Today: [Starting Raw Input C++ addon]
+Blockers: [Need Windows SDK installed]
+Questions: [How to handle extended scancodes?]
+```
+
+---
+
+## 🎉 You're Ready to Start!
+
+**Immediate Priority:**
+1. Run `npm init` in `middleware/` directory
+2. Install winreg and node-hid
+3. Implement SharpKeys translator (Day 1-2)
+4. Test with real SharpKeys mappings
+5. Report back: "SharpKeys translator working ✅"
+
+**Timeline:**
+- **Week 1:** Foundation (SharpKeys + project setup)
+- **Week 2-4:** Phase 1 (Raw Input capture)
+- **Week 5-8:** Phase 2 (Device parsers)
+- **Week 9-10:** Phase 3 (Anti-cheat compliance)
+
+---
+
+## 📞 Next Check-In
+
+After completing Week 1 tasks, return with:
+1. ✅ SharpKeys translator implementation
+2. ✅ C++ addon compiling (even if stub)
+3. ✅ DECISIONS.md filled out
+4. ❓ Any blockers encountered
+
+**I'll help you with:**
+- Detailed Raw Input API implementation
+- C++ debugging
+- Gesture detection algorithms
+- Anti-cheat testing strategy
+
+---
+
+**🚀 Let's build this! Start with Step 1 above and report back.**
+
+---
+
+## Quick Reference: File Structure
+
+```
+middleware/
+├── package.json
+├── binding.gyp
+├── tsconfig.json
+├── docs/
+│   ├── DECISIONS.md
+│   └── research/
+│       ├── phase0-runtime.md ✅
+│       ├── phase0-anticheat.md ✅
+│       └── phase0-sharpkeys.md ✅
+├── src/
+│   ├── index.ts                 (main entry)
+│   ├── sharpKeysTranslator.ts   (Week 1)
+│   ├── inputCapture.ts          (Phase 1)
+│   ├── gestureEngine.ts         (Phase 1)
+│   └── native/
+│       └── rawinput.cc          (Phase 1)
+└── test/
+    └── sharpKeysTranslator.test.ts
+```
+
+---
+
+**Good luck! You have all the research you need. Time to code.** 💪

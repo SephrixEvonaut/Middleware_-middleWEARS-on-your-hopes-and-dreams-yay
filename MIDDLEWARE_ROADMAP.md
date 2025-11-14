@@ -11,9 +11,10 @@
 
 ### Tasks
 1. ✅ Document current device support requirements
-2. ⬜ Choose runtime environment (Browser WebHID vs Electron vs Native Service)
-3. ⬜ Create `docs/DECISIONS.md` file to track technical choices
-4. ⬜ Research anti-cheat policies for target games
+2. ✅ Choose runtime environment → Native Node.js Service (see docs/DECISIONS.md)
+3. ✅ Create `docs/DECISIONS.md` file to track technical choices
+4. ✅ Research anti-cheat policies → Azeron/Swiftpoint legal framework (see docs/LEGAL_COMPLIANCE.md)
+5. ✅ Document legal compliance strategy
 
 ### AI Research Prompts
 

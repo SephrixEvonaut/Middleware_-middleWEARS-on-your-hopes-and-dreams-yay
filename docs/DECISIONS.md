@@ -21,16 +21,36 @@ Evaluating Browser WebHID vs Electron vs Native Node.js service for hardware inp
 
 ## Decision 2: Anti-Cheat Compliance Strategy
 **Date:** November 14, 2025  
-**Status:** Under Research  
+**Status:** Accepted  
 
 **Context:**
 Understanding anti-cheat policies for Riot Vanguard, EasyAntiCheat, BattlEye.
+Following legal framework established by Azeron Cyborg and Swiftpoint mouse.
 
 **Decision:**
-[Pending - Run PROMPT 2 and paste findings here]
+Operate as **hardware translator/driver equivalent**, NOT cheat software.
+
+**Core Rules:**
+1. Maintain strict 1:1 input/output ratio (every physical press = one virtual press)
+2. Add 1-5ms human timing jitter
+3. Use Windows Raw Input API (read-only, like game engines)
+4. Zero game process interaction or memory manipulation
+5. Complete audit trail for dispute resolution
+6. Operate within same legal boundaries as Azeron/Swiftpoint firmware
+
+**Legal Framework:**
+- Same category as programmable gaming peripheral firmware
+- Protected under accessibility device provisions
+- Compliant with all major anti-cheat systems when 1:1 ratio maintained
 
 **Consequences:**
-- TBD based on research
+- ✅ Safe for competitive gaming (when used properly)
+- ✅ Transparent and auditable behavior
+- ✅ User empowerment within legal limits
+- ⚠️ NO macro features (1:N mapping forbidden)
+- ⚠️ NO automation features (requires physical input always)
+
+**Reference:** See docs/LEGAL_COMPLIANCE.md for full framework
 
 ---
 
