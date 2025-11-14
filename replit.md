@@ -44,45 +44,79 @@ A comprehensive web-based configuration management system for designing, testing
 5. **FSR Sensors** - Analog pressure-sensitive input
 
 ### Gesture Detection
-- Single press (< 80ms)
-- Double press (within 300-500ms window)
+- Single press (< 150ms)
+- Double press (within 350ms window)
 - Triple press
 - Quadruple press
-- Long press (80-140ms hold)
+- Long press (150-500ms hold, optimized for human timing)
 - Cancel-and-hold pattern
+- Debounce filtering (10ms) for switch bounce elimination
 
 ### Testing & Visualization
 - Real-time gesture simulator using keyboard input (SPACE key)
 - Timeline visualizer showing last 1000ms of events
 - Detection window zones overlay
 - Event history log with millisecond precision
+- Debug mode with comprehensive console logging
+- Visual feedback for active gesture detection windows
+- Ref-based architecture preventing stale closures
 
 ## Development Status
 
-### Completed (Phase 1 - Frontend)
-✅ Complete data schema and TypeScript interfaces
-✅ Design system configuration (fonts, colors, spacing)
-✅ All device configuration panels
-✅ Gesture settings interface
-✅ Real-time gesture simulator with timeline
-✅ Input mapping designer
-✅ Profile export/import functionality
-✅ Sidebar navigation
-✅ Theme toggle (light/dark mode)
-✅ Local storage persistence
+### ✅ Completed - Phase 1: Configuration Frontend (Complete)
+- Complete data schema and TypeScript interfaces
+- Design system configuration (fonts, colors, spacing)
+- All device configuration panels (Keyboard, Azeron, Razer, Swiftpoint, FSR)
+- Gesture settings interface with timing controls
+- Real-time gesture simulator with debug mode
+- Timeline visualizer with 1000ms event history
+- Input mapping designer with drag-and-drop
+- Profile export/import (JSON/JavaScript)
+- Sidebar navigation with profile selector
+- Theme toggle (light/dark mode)
+- Local storage persistence
+- Backend API with CRUD operations
+- Gesture detection engine (single/double/triple/quad/long press)
+- Debounce filtering and stale closure prevention
 
-### In Progress
-- Backend API implementation
-- Profile CRUD operations
-- Data validation and persistence
+### 🚧 Next Phase: Hardware Middleware Integration (See MIDDLEWARE_ROADMAP.md)
+**Phase 0 - Architecture Decisions (Current)**
+- Choose runtime environment (Browser WebHID vs Electron vs Native)
+- Research anti-cheat policies for target games
+- Document architecture decisions
+- Plan raw input capture strategy
 
-### Future Enhancements
-- WebSocket server for live hardware communication
+**Phase 1 - Raw Input Capture MVP**
+- Windows Raw Input API integration
+- Keyboard/mouse event capture (<10ms latency)
+- Device identification (VID/PID)
+- Event dispatcher pipeline
+
+**Phase 2 - Device Parsers & Translation**
+- SharpKeys registry reader and scancode translation
+- Azeron Cyborg HID protocol parser
+- Razer MMO mouse parser
+- Swiftpoint tilt sensor parser
+- FSR analog sensor integration (USB HID or Serial)
+
+**Phase 3 - Anti-Cheat Compliance**
+- 1:1 input/output ratio validation
+- Audit trail logging
+- Macro detection prevention
+- Game-specific certification
+
+**Phase 4 - Cross-Platform Support**
+- Linux libevdev integration
+- macOS IOHIDManager support
+- Deployment and packaging
+
+### Future Enhancements (Post-Middleware)
 - Profile versioning and rollback
-- Advanced macro builder
+- Advanced macro builder (anti-cheat compliant)
 - FSR calibration wizard
 - Conflict detection for overlapping patterns
 - Usage analytics dashboard
+- WebSocket server for live hardware monitoring
 
 ## Design Guidelines
 - **Typography**: Inter (400-700) for UI, JetBrains Mono for technical values
