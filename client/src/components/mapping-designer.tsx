@@ -15,10 +15,12 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Profile, InputMapping, GestureType } from "@shared/schema";
+import { ALL_KEYBOARD_KEYS } from "@shared/keyboardKeys";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, GripVertical } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MappingDesignerProps {
   profile: Profile;
@@ -66,12 +68,12 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
   const availableInputs: DraggableInputItem[] = [];
   
   if (profile.devices.keyboard.enabled) {
-    ["q", "w", "e", "r", "t", "a", "s", "d", "f", "g"].forEach((key) => {
+    ALL_KEYBOARD_KEYS.forEach((key) => {
       availableInputs.push({
-        id: `keyboard-${key}`,
+        id: `keyboard-${key.id}`,
         deviceType: "keyboard",
-        inputId: key.toUpperCase(),
-        label: `Key ${key.toUpperCase()}`,
+        inputId: key.label,
+        label: key.label,
       });
     });
   }
@@ -252,13 +254,112 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
                   <CardDescription className="text-xs" data-testid="text-available-inputs-description">Drag to actions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px]">
-                    <div className="flex flex-col gap-2">
-                      {availableInputs.map((input) => (
-                        <DraggableInput key={input.id} input={input} />
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <Tabs defaultValue="keyboard" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2" data-testid="tabs-input-device">
+                      <TabsTrigger value="keyboard" data-testid="tab-keyboard">Keyboard</TabsTrigger>
+                      <TabsTrigger value="devices" data-testid="tab-devices">Devices</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="keyboard" className="mt-4">
+                      <ScrollArea className="h-[400px]">
+                        <div className="flex flex-col gap-3">
+                          {/* Letters */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Letters</div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && /^[A-Z]$/.test(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Numbers */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Numbers</div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && /^[0-9]$/.test(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Punctuation */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Punctuation</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && /[`\-=\[\]\\;',./~!@#$%^&*()_+{}|:"<>?]/.test(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Special Keys */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Special</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && ['Space', 'Enter', 'Tab', 'Backspace', 'Delete', 'Escape', 'Caps Lock'].includes(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Function Keys */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Function</div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && input.label.startsWith('F'))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Navigation */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Navigation</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && ['Arrow Up', 'Arrow Down', 'Arrow Left', 'Arrow Right', 'Home', 'End', 'Page Up', 'Page Down', 'Insert'].includes(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                          
+                          {/* Modifiers */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1 px-1">Modifiers (Toggle)</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {availableInputs
+                                .filter(input => input.deviceType === "keyboard" && ['Ctrl', 'Shift', 'Alt', 'Win/Cmd'].includes(input.label))
+                                .map((input) => (
+                                  <DraggableInput key={input.id} input={input} compact />
+                                ))}
+                            </div>
+                          </div>
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                    <TabsContent value="devices" className="mt-4">
+                      <ScrollArea className="h-[400px]">
+                        <div className="flex flex-col gap-2">
+                          {availableInputs
+                            .filter(input => input.deviceType !== "keyboard")
+                            .map((input) => (
+                              <DraggableInput key={input.id} input={input} />
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </div>
@@ -300,7 +401,7 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
   );
 }
 
-function DraggableInput({ input }: { input: DraggableInputItem }) {
+function DraggableInput({ input, compact = false }: { input: DraggableInputItem; compact?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: input.id,
   });
@@ -319,9 +420,9 @@ function DraggableInput({ input }: { input: DraggableInputItem }) {
       className="cursor-grab active:cursor-grabbing"
       data-testid={`draggable-input-${input.id}`}
     >
-      <Badge variant="outline" className="w-full justify-start gap-2">
+      <Badge variant="outline" className={`w-full justify-start gap-2 ${compact ? 'text-xs py-0.5' : ''}`}>
         <GripVertical className="h-3 w-3" />
-        {input.label}
+        <span className={compact ? 'truncate' : ''}>{input.label}</span>
       </Badge>
     </div>
   );

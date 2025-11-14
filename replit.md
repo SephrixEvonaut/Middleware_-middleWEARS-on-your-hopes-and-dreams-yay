@@ -37,7 +37,15 @@ A comprehensive web-based configuration management system for designing, testing
 ## Key Features
 
 ### Device Support
-1. **Keyboard** - Standard keyboard with SharpKeys registry remapping detection
+1. **Keyboard** - Complete keyboard coverage (79 keys total):
+   - All letters (A-Z) - 26 keys
+   - All numbers (0-9) - 10 keys
+   - All punctuation (` ~ ! @ # $ % ^ & * ( ) - _ = + [ ] { } \ | ; : ' " , . < > / ?) - 11 keys
+   - Special keys (Space, Enter, Tab, Backspace, Delete, Escape, Caps Lock) - 7 keys
+   - Function keys (F1-F12) - 12 keys
+   - Navigation (Arrows, Home, End, Page Up/Down, Insert) - 9 keys
+   - Modifiers (Ctrl, Shift, Alt, Win/Cmd - for toggle system) - 4 keys
+   - SharpKeys registry remapping detection
 2. **Azeron Cyborg** - 29-button gaming keypad with thumbpad
 3. **Razer MMO Mouse** - 12 programmable side buttons with DPI stages
 4. **Swiftpoint Mouse** - Advanced tilt sensor configuration
@@ -61,16 +69,34 @@ A comprehensive web-based configuration management system for designing, testing
 - Visual feedback for active gesture detection windows
 - Ref-based architecture preventing stale closures
 
+## Recent Updates (November 14, 2025)
+
+### ✅ Complete Keyboard Coverage Added
+- Expanded from 10 keys to **79 comprehensive keyboard keys**
+- Organized by category: Letters, Numbers, Punctuation, Special, Function, Navigation, Modifiers
+- Tab-based interface: "Keyboard" tab (all 79 keys) + "Devices" tab (Azeron, Razer, etc.)
+- Compact display for efficient space usage
+
+### ✅ Legal Compliance Framework Established
+- **docs/LEGAL_COMPLIANCE.md** - Complete legal framework following Azeron/Swiftpoint model
+- **docs/MODIFIER_TOGGLE_LEGAL.md** - Modifier toggle system (like Windows Sticky Keys)
+- **middleware/README.md** - Implementation guide with compliance safeguards
+- 1:1 input/output ratio enforcement architecture designed
+- Anti-cheat compliance strategy documented (Vanguard, EAC, BattlEye)
+
 ## Development Status
 
 ### ✅ Completed - Phase 1: Configuration Frontend (Complete)
 - Complete data schema and TypeScript interfaces
 - Design system configuration (fonts, colors, spacing)
 - All device configuration panels (Keyboard, Azeron, Razer, Swiftpoint, FSR)
+- **Complete keyboard key coverage (79 keys)** - Letters, numbers, punctuation, special, function, navigation, modifiers
 - Gesture settings interface with timing controls
 - Real-time gesture simulator with debug mode
 - Timeline visualizer with 1000ms event history
 - Input mapping designer with drag-and-drop
+- Categorized keyboard input selection (organized by key type)
+- Modifier toggle system design (Ctrl/Shift/Alt states - legal accessibility feature)
 - Profile export/import (JSON/JavaScript)
 - Sidebar navigation with profile selector
 - Theme toggle (light/dark mode)
