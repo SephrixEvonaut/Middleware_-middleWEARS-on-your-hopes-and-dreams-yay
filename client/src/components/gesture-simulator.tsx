@@ -143,17 +143,21 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   };
 
   const handleRelease = () => {
-    if (!pressStartRef.current) return;
+    // Guard against duplicate releases or releasing when not pressed
+    if (!pressStartRef.current || !isPressedRef.current) return;
     
     const now = Date.now();
     const duration = now - pressStartRef.current;
     const currentSettings = settingsRef.current;
     const currentDebugMode = debugModeRef.current;
     
-    isPressedRef.current = false; // Update ref synchronously
+    // Update refs synchronously BEFORE setting state to prevent race conditions
+    isPressedRef.current = false;
+    pressStartRef.current = null;
+    
+    // Now safe to update state (interval will see isPressedRef.current = false and stop)
     setIsPressed(false);
     setCurrentDuration(0);
-    pressStartRef.current = null;
 
     let gesture: GestureType | null = null;
     let detectedChargeLevel = 0;
