@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import Home from "@/pages/home";
 import { useProfiles, useCreateProfile, useUpdateProfile } from "@/hooks/use-profiles";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ModifierProvider } from "@/contexts/ModifierContext";
 import type { Profile, InsertProfile } from "@shared/schema";
 
 export default function AppContent() {
@@ -37,6 +38,7 @@ export default function AppContent() {
         devices: updatedProfile.devices,
         gestureSettings: updatedProfile.gestureSettings,
         inputMappings: updatedProfile.inputMappings,
+        modifierDefaults: updatedProfile.modifierDefaults,
       },
     });
   };
@@ -59,6 +61,7 @@ export default function AppContent() {
       devices: importedProfile.devices,
       gestureSettings: importedProfile.gestureSettings,
       inputMappings: importedProfile.inputMappings,
+      modifierDefaults: importedProfile.modifierDefaults || { ctrl: false, shift: false, alt: false },
     };
     
     createProfile.mutate(insertData, {
@@ -87,36 +90,38 @@ export default function AppContent() {
   }
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar
-          currentProfile={currentProfile}
-          profiles={profiles}
-          selectedDevice="all"
-          onDeviceSelect={() => {}}
-          onProfileSelect={handleProfileSelect}
-          onExport={() => setExportDialogOpen(true)}
-          onImport={() => setImportDialogOpen(true)}
-        />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between p-2 border-b border-border bg-sidebar" data-testid="header-main">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
-          </header>
-          <Home
+    <ModifierProvider currentProfile={currentProfile}>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar
             currentProfile={currentProfile}
-            onProfileUpdate={handleProfileUpdate}
-            onToggleFavorite={handleToggleFavorite}
+            profiles={profiles}
+            selectedDevice="all"
+            onDeviceSelect={() => {}}
+            onProfileSelect={handleProfileSelect}
             onExport={() => setExportDialogOpen(true)}
             onImport={() => setImportDialogOpen(true)}
-            exportDialogOpen={exportDialogOpen}
-            importDialogOpen={importDialogOpen}
-            onCloseExport={() => setExportDialogOpen(false)}
-            onCloseImport={() => setImportDialogOpen(false)}
-            onImportProfile={handleImportProfile}
           />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="flex items-center justify-between p-2 border-b border-border bg-sidebar" data-testid="header-main">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+            <Home
+              currentProfile={currentProfile}
+              onProfileUpdate={handleProfileUpdate}
+              onToggleFavorite={handleToggleFavorite}
+              onExport={() => setExportDialogOpen(true)}
+              onImport={() => setImportDialogOpen(true)}
+              exportDialogOpen={exportDialogOpen}
+              importDialogOpen={importDialogOpen}
+              onCloseExport={() => setExportDialogOpen(false)}
+              onCloseImport={() => setImportDialogOpen(false)}
+              onImportProfile={handleImportProfile}
+            />
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </ModifierProvider>
   );
 }

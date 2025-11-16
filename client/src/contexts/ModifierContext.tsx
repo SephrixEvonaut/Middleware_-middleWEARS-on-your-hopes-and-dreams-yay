@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import type { ModifierState, Profile } from "@shared/schema";
+import type { ModifierState, ModifierMode, Profile } from "@shared/schema";
 
 interface ModifierContextType {
   modifierState: ModifierState;
   setModifierState: (state: ModifierState | ((prev: ModifierState) => ModifierState)) => void;
   toggleModifier: (modifier: keyof ModifierState) => void;
+  setMode: (mode: ModifierMode) => void;
   resetToDefaults: () => void;
   hasChanges: boolean;
 }
@@ -24,25 +25,22 @@ export function ModifierProvider({ children, currentProfile }: ModifierProviderP
   });
 
   // Track if current state differs from profile defaults
+  const defaults = currentProfile?.modifierDefaults || { ctrl: false, shift: false, alt: false };
   const hasChanges =
     currentProfile &&
-    (modifierState.ctrl !== currentProfile.modifierDefaults.ctrl ||
-      modifierState.shift !== currentProfile.modifierDefaults.shift ||
-      modifierState.alt !== currentProfile.modifierDefaults.alt);
+    (modifierState.ctrl !== defaults.ctrl ||
+      modifierState.shift !== defaults.shift ||
+      modifierState.alt !== defaults.alt);
 
   // Initialize state from profile when profile changes or modifierDefaults update
   useEffect(() => {
-    if (currentProfile?.modifierDefaults) {
-      setModifierState(currentProfile.modifierDefaults);
-    } else {
-      // Fallback if no profile loaded
-      setModifierState({ ctrl: false, shift: false, alt: false });
-    }
+    const defaults = currentProfile?.modifierDefaults || { ctrl: false, shift: false, alt: false };
+    setModifierState(defaults);
   }, [
     currentProfile?.id,
-    currentProfile?.modifierDefaults.ctrl,
-    currentProfile?.modifierDefaults.shift,
-    currentProfile?.modifierDefaults.alt,
+    currentProfile?.modifierDefaults?.ctrl,
+    currentProfile?.modifierDefaults?.shift,
+    currentProfile?.modifierDefaults?.alt,
   ]); // Re-init when profile changes OR when modifierDefaults update
 
   const toggleModifier = (modifier: keyof ModifierState) => {
@@ -52,12 +50,22 @@ export function ModifierProvider({ children, currentProfile }: ModifierProviderP
     }));
   };
 
+  const setMode = (mode: ModifierMode) => {
+    const modeMap: Record<ModifierMode, ModifierState> = {
+      normal: { ctrl: false, shift: false, alt: false },
+      ctrl: { ctrl: true, shift: false, alt: false },
+      shift: { ctrl: false, shift: true, alt: false },
+      alt: { ctrl: false, shift: false, alt: true },
+      ctrl_shift: { ctrl: true, shift: true, alt: false },
+      ctrl_alt: { ctrl: true, shift: false, alt: true },
+      shift_alt: { ctrl: false, shift: true, alt: true },
+    };
+    setModifierState(modeMap[mode]);
+  };
+
   const resetToDefaults = () => {
-    if (currentProfile?.modifierDefaults) {
-      setModifierState(currentProfile.modifierDefaults);
-    } else {
-      setModifierState({ ctrl: false, shift: false, alt: false });
-    }
+    const defaults = currentProfile?.modifierDefaults || { ctrl: false, shift: false, alt: false };
+    setModifierState(defaults);
   };
 
   return (
@@ -66,6 +74,7 @@ export function ModifierProvider({ children, currentProfile }: ModifierProviderP
         modifierState,
         setModifierState,
         toggleModifier,
+        setMode,
         resetToDefaults,
         hasChanges: !!hasChanges,
       }}

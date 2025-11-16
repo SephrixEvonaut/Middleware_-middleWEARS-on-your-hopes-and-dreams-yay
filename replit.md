@@ -69,7 +69,22 @@ A comprehensive web-based configuration management system for designing, testing
 - Visual feedback for active gesture detection windows
 - Ref-based architecture preventing stale closures
 
-## Recent Updates (November 14, 2025)
+## Recent Updates (November 16, 2025)
+
+### ✅ Phase 3: Enhanced Modifier Toggle System (Completed)
+- **ModifierContext** - Two-layer state management (profile defaults + runtime state)
+- **ModifierToggle Component** - Individual toggles + 7 quick mode presets (Normal, Ctrl, Shift, Alt, Ctrl+Shift, Ctrl+Alt, Shift+Alt)
+- **Save/Reset UX** - Explicit Save as Default button, Reset to defaults
+- **UI Integration** - Embedded in Test Gestures tab, status pill in Mapping Designer header
+- **Legal Compliance** - Like Windows Sticky Keys, maintains 1:1 input/output ratio
+- **State Synchronization** - Auto-hydrates from profile defaults, prevents drift
+
+### ✅ Phase 4: Hold Timer Visualization (Completed)
+- **Real-time Progress Bar** - 0-2000ms scale with smooth transitions
+- **Threshold Markers** - Visual indicators at 150ms (long press min), 500ms, 1000ms
+- **Color Transitions** - Orange (0-150ms) → Yellow (150-500ms) → Green (500-1000ms) → Blue (1000ms+)
+- **Dark Mode Support** - Tailwind tokens for proper contrast in light/dark themes
+- **Performance** - Optimized interval cleanup, 10ms update rate
 
 ### ✅ Complete Keyboard Coverage Added
 - Expanded from 10 keys to **79 comprehensive keyboard keys**
@@ -86,7 +101,39 @@ A comprehensive web-based configuration management system for designing, testing
 
 ## Development Status
 
-### ✅ Completed - Phase 1: Configuration Frontend (Complete)
+### ✅ Completed - Configuration Frontend with Four Legal Hold Mechanics
+**Phase 1: Charge-Release Gesture System**
+- Charge bar visualization (0-100% charge level)
+- Configurable hold window (300ms-2000ms default)
+- Real-time charge tracking during hold
+- Released charge level display
+- 1:1 ratio compliance (one hold+release cycle → one output with charge metadata)
+
+**Phase 2: Rapid-Tap Analytics**
+- TPS (Taps Per Second) tracking with 1-second rolling window
+- Peak TPS recording
+- Tap interval visualization (last 10 taps)
+- Average interval calculation
+- Detection-only design (no automation, no turbo mode)
+- First-interval overflow bug fixed
+
+**Phase 3: Enhanced Modifier Toggle System**
+- ModifierContext with two-layer state (defaults + runtime)
+- Individual modifier toggles (Ctrl, Shift, Alt)
+- 7 quick mode presets (Normal, Ctrl, Shift, Alt, combinations)
+- Save as Default / Reset functionality
+- Embedded in Test Gestures tab
+- Status pill in Mapping Designer header
+- Legal compliance like Windows Sticky Keys
+
+**Phase 4: Hold Timer Visualization**
+- Real-time progress bar (0-2000ms scale)
+- Threshold markers at 150ms, 500ms, 1000ms
+- Color transitions (Orange → Yellow → Green → Blue)
+- Dark mode support with Tailwind tokens
+- Optimized 10ms update rate with proper cleanup
+
+**Core Features:**
 - Complete data schema and TypeScript interfaces
 - Design system configuration (fonts, colors, spacing)
 - All device configuration panels (Keyboard, Azeron, Razer, Swiftpoint, FSR)
@@ -96,13 +143,12 @@ A comprehensive web-based configuration management system for designing, testing
 - Timeline visualizer with 1000ms event history
 - Input mapping designer with drag-and-drop
 - Categorized keyboard input selection (organized by key type)
-- Modifier toggle system design (Ctrl/Shift/Alt states - legal accessibility feature)
 - Profile export/import (JSON/JavaScript)
 - Sidebar navigation with profile selector
 - Theme toggle (light/dark mode)
 - Local storage persistence
 - Backend API with CRUD operations
-- Gesture detection engine (single/double/triple/quad/long press)
+- Gesture detection engine (single/double/triple/quad/long press/charge-release)
 - Debounce filtering and stale closure prevention
 
 ### 🚧 Next Phase: Hardware Middleware Integration (See MIDDLEWARE_ROADMAP.md)

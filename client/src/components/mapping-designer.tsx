@@ -19,8 +19,9 @@ import { ALL_KEYBOARD_KEYS } from "@shared/keyboardKeys";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Keyboard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useModifierContext } from "@/contexts/ModifierContext";
 
 interface MappingDesignerProps {
   profile: Profile;
@@ -53,6 +54,20 @@ const gestureLabels: Record<GestureType, string> = {
 export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedGesture, setSelectedGesture] = useState<GestureType>("single_press");
+  const { modifierState } = useModifierContext();
+
+  const getCurrentModeName = (): string => {
+    const { ctrl, shift, alt } = modifierState;
+    if (!ctrl && !shift && !alt) return "Normal";
+    if (ctrl && shift && alt) return "Ctrl+Shift+Alt";
+    if (ctrl && shift) return "Ctrl+Shift";
+    if (ctrl && alt) return "Ctrl+Alt";
+    if (shift && alt) return "Shift+Alt";
+    if (ctrl) return "Ctrl";
+    if (shift) return "Shift";
+    if (alt) return "Alt";
+    return "Normal";
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -222,20 +237,29 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
               Drag inputs from the left panel onto action categories to create gesture mappings
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Gesture:</span>
-            <select
-              value={selectedGesture}
-              onChange={(e) => setSelectedGesture(e.target.value as GestureType)}
-              className="px-3 min-h-8 rounded-md border border-input bg-background text-sm"
-              data-testid="select-gesture-type"
-            >
-              {Object.entries(gestureLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Keyboard className="w-3 h-3 text-muted-foreground" />
+              <Badge variant="outline" className="font-mono text-xs" data-testid="badge-modifier-mode">
+                {getCurrentModeName()}
+              </Badge>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Gesture:</span>
+              <select
+                value={selectedGesture}
+                onChange={(e) => setSelectedGesture(e.target.value as GestureType)}
+                className="px-3 min-h-8 rounded-md border border-input bg-background text-sm"
+                data-testid="select-gesture-type"
+              >
+                {Object.entries(gestureLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </CardHeader>

@@ -238,13 +238,15 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     let interval: ReturnType<typeof setInterval> | null = null;
     if (isPressed && pressStartRef.current) {
       interval = setInterval(() => {
-        setCurrentDuration(Date.now() - pressStartRef.current!);
+        if (pressStartRef.current) {
+          setCurrentDuration(Date.now() - pressStartRef.current);
+        }
       }, 10);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPressed, settings]);
+  }, [isPressed]);
 
   const reset = () => {
     setEvents([]);
@@ -352,6 +354,59 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
               </div>
             )}
           </div>
+
+          {/* Hold Timer Visualization */}
+          {isPressed && (
+            <div className="w-full max-w-md mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted-foreground">Hold Duration</span>
+                <span className="text-xs font-mono text-muted-foreground">{currentDuration}ms</span>
+              </div>
+              <div className="relative w-full h-4 bg-muted rounded-full overflow-hidden border border-border">
+                {/* Progress bar with color transitions */}
+                <div
+                  className={`h-full transition-all duration-100 ${
+                    currentDuration < 150 
+                      ? 'bg-gradient-to-r from-orange-400 to-orange-300'
+                      : currentDuration < 500
+                      ? 'bg-gradient-to-r from-yellow-400 to-yellow-300'
+                      : currentDuration < 1000
+                      ? 'bg-gradient-to-r from-green-400 to-green-300'
+                      : 'bg-gradient-to-r from-blue-400 to-blue-300'
+                  }`}
+                  style={{
+                    width: `${Math.min(100, (currentDuration / 2000) * 100)}%`,
+                  }}
+                  data-testid="hold-timer-bar"
+                />
+                {/* Threshold markers */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-orange-500 dark:bg-orange-400"
+                  style={{ left: `${(150 / 2000) * 100}%` }}
+                  title="150ms - Long Press Min"
+                />
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-yellow-500 dark:bg-yellow-400"
+                  style={{ left: `${(500 / 2000) * 100}%` }}
+                  title="500ms"
+                />
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-green-500 dark:bg-green-400"
+                  style={{ left: `${(1000 / 2000) * 100}%` }}
+                  title="1000ms"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                <span>0ms</span>
+                <div className="flex gap-3 text-[10px]">
+                  <span className="text-orange-500 dark:text-orange-400">150ms</span>
+                  <span className="text-yellow-500 dark:text-yellow-400">500ms</span>
+                  <span className="text-green-500 dark:text-green-400">1000ms</span>
+                </div>
+                <span>2000ms</span>
+              </div>
+            </div>
+          )}
 
           {/* Charge Bar */}
           {(currentChargeLevel > 0 || (isPressed && currentDuration >= settings.chargeMinHold)) && (

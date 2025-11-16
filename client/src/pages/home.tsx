@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Save, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useModifierContext } from "@/contexts/ModifierContext";
 import { DeviceConfigKeyboard } from "@/components/device-config-keyboard";
 import { DeviceConfigAzeron } from "@/components/device-config-azeron";
 import { DeviceConfigRazer } from "@/components/device-config-razer";
@@ -10,6 +11,7 @@ import { DeviceConfigSwiftpoint } from "@/components/device-config-swiftpoint";
 import { DeviceConfigFSR } from "@/components/device-config-fsr";
 import { GestureSettingsComponent } from "@/components/gesture-settings";
 import { GestureSimulator } from "@/components/gesture-simulator";
+import { ModifierToggle } from "@/components/modifier-toggle";
 import { MappingDesigner } from "@/components/mapping-designer";
 import { ProfileExport } from "@/components/profile-export";
 import { ProfileImport } from "@/components/profile-import";
@@ -43,6 +45,7 @@ export default function Home({
   const [selectedDevice, setSelectedDevice] = useState<string>("keyboard");
   const { toast } = useToast();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { modifierState, toggleModifier, setMode, resetToDefaults, hasChanges: hasModifierChanges } = useModifierContext();
 
   const handleProfileChange = (updates: Partial<Profile>) => {
     const updatedProfile = { ...currentProfile, ...updates };
@@ -57,6 +60,14 @@ export default function Home({
     toast({
       title: "Profile saved",
       description: `"${currentProfile.name}" has been updated successfully.`,
+    });
+  };
+
+  const handleSaveModifierDefaults = () => {
+    handleProfileChange({ modifierDefaults: modifierState });
+    toast({
+      title: "Modifier defaults saved",
+      description: "Modifier toggle state has been saved as profile default.",
     });
   };
 
@@ -235,7 +246,17 @@ export default function Home({
           </TabsContent>
 
           <TabsContent value="test" data-testid="tab-content-test">
-            <GestureSimulator settings={currentProfile.gestureSettings} />
+            <div className="space-y-6">
+              <GestureSimulator settings={currentProfile.gestureSettings} />
+              <ModifierToggle
+                modifierState={modifierState}
+                onToggleModifier={toggleModifier}
+                onSetMode={setMode}
+                onReset={resetToDefaults}
+                onSave={handleSaveModifierDefaults}
+                hasChanges={hasModifierChanges}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="map" data-testid="tab-content-map">

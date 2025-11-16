@@ -18,7 +18,8 @@ export function useProfile(id: string) {
 export function useCreateProfile() {
   return useMutation({
     mutationFn: async (profile: InsertProfile) => {
-      return await apiRequest<Profile>("POST", "/api/profiles", profile);
+      const res = await apiRequest("POST", "/api/profiles", profile);
+      return await res.json() as Profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
@@ -29,7 +30,8 @@ export function useCreateProfile() {
 export function useUpdateProfile() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<InsertProfile> }) => {
-      return await apiRequest<Profile>("PATCH", `/api/profiles/${id}`, updates);
+      const res = await apiRequest("PATCH", `/api/profiles/${id}`, updates);
+      return await res.json() as Profile;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
