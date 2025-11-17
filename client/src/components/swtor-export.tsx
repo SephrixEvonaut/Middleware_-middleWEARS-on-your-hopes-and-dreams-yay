@@ -104,6 +104,17 @@ export function SWTORExport({ profile }: SWTORExportProps) {
           </p>
         </div>
 
+        {mappingCount === 0 && (
+          <div className="p-3 bg-muted/50 border rounded-md">
+            <p className="text-xs text-muted-foreground font-medium">
+              No input mappings configured
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Go to "Input Mappings" tab to create gesture-to-action bindings first.
+            </p>
+          </div>
+        )}
+
         {collisionCount > 0 && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
             <p className="text-xs text-destructive font-medium">
