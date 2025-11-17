@@ -19,6 +19,7 @@ import {
   FileDown,
   FileUp,
   Star,
+  Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Profile } from "@shared/schema";
+import { SWTORExport } from "./swtor-export";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 interface AppSidebarProps {
   currentProfile?: Profile;
@@ -58,6 +67,8 @@ export function AppSidebar({
   onExport,
   onImport,
 }: AppSidebarProps) {
+  const [swtorExportOpen, setSwtorExportOpen] = useState(false);
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border" data-testid="sidebar-header">
@@ -110,7 +121,35 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
+        {/* SWTOR Export Section */}
+        {currentProfile && (
+          <Collapsible open={swtorExportOpen} onOpenChange={setSwtorExportOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full justify-between gap-2"
+                data-testid="button-toggle-swtor-export"
+              >
+                <div className="flex items-center gap-2">
+                  <Swords className="w-4 h-4" />
+                  <span>SWTOR Export</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    swtorExportOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <SWTORExport profile={currentProfile} />
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Profile Import/Export */}
         <div className="flex flex-col gap-2">
           <Button
             variant="outline"
