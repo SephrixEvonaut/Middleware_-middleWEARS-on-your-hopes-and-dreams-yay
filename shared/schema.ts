@@ -13,6 +13,8 @@ export const gestureSettingsSchema = z.object({
   // Charge-Release Settings
   chargeMinHold: z.number().min(100).max(1000).default(300),
   chargeMaxHold: z.number().min(500).max(5000).default(2000),
+  // Output Sequence Settings
+  outputKeyPadding: z.number().min(0).max(200).default(25),
 });
 
 // Device Configurations
@@ -163,7 +165,6 @@ export type AzeronConfig = z.infer<typeof azeronConfigSchema>;
 export type RazerMMOConfig = z.infer<typeof razerMMOConfigSchema>;
 export type SwiftpointConfig = z.infer<typeof swiftpointConfigSchema>;
 export type FSRSensorConfig = z.infer<typeof fsrSensorConfigSchema>;
-export type GestureType = z.infer<typeof gestureTypeSchema>;
 export type InputMapping = z.infer<typeof inputMappingSchema>;
 
 // Gesture Event Schema (for runtime gesture detection)
