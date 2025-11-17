@@ -1,0 +1,172 @@
+Evonaut — 9:24 AM
+My dance lessons have begun 
+
+Im basically turning swtor into DDR for my fingers lmfao
+Every tap gets recycled through the series of combos and produced sequences to make every tap actually cpunt towarda an action to conduct myselves optimally omce i gain a rhythm
+Im even gonna have 5 keybinds that just set normal app timers so i can track generally certain phases when i acknowledge them occuring in game and wanna know when theyll be up next
+But im making use of permanently assign a certain target marker to whoever i switch my focus target to
+Evonaut — 9:34 AM
+And might do one for my current target gathered in every fashion. Just im allowing myself the chance to use any targetti g system any gcd for where i land my next attack and monitor guard swaps and play/burst interceptions inbetween applying my damags to good places 
+
+Ill have easier time remebering my taunts too cuz they start to fit into a rhythym and my taps of beat will convert to their upkeep with just picking their next target to be applied to 
+
+So its like playing piano for which target you will hit and checking up on target of targets
+
+But you keep up certain priorities as well like curshing blow and force scream then decididing between vicious throw, ravage, and smash depending on circumstances
+Plus comboing retaliations seamlessly and having set ups for reliable burst combos or sustain combos that use retaliation heavily during certain players dcds, us hard cleaving as the play, or during saberqard phases where i have an enrage coming up
+Aldoraz — 9:37 AM
+idk bro this seems like an insane way to try and play
+Evonaut — 9:37 AM
+Oh it is
+Im so excited to be insane
+Aldoraz — 9:38 AM
+its reminds me of the stupid shorts where there is someone playing a game with a recorder and they are just making noises to try and move their character
+Evonaut — 9:40 AM
+Alt 
+
+Shift 
+
+Shift + alt
+
+Ctrl 
+
+Will all hold different mods of what my taps would plan to register coming up next. Most of what the secondary and third taps provide are off gcd upkeeps or targetting systems used. The modes switch which targetting system gets used and limit the amount of off gcd usage of certain abilities if theyre ammo contingent like retaliation. 
+
+But super charged cells can be pretty consistent
+I even have the ability to make use of group member 1, 2, 3, 4
+
+And the self target modifier cuz 1 of the group members will not work in arenas and it will which ever member is axtually you assigned in.the group
+I coukd even keep a blue shield icon on my guarded target if i wanted to
+To reassure a granked team that they have guard
+Maybe even put purple cog forever on our last target (friendly or enemy) so i always know who id be circling back to and where theyve decided to head in the meantime to my last attacks on them
+Evonaut — 9:44 AM
+Thats cuz it basically is lmfao
+Eventually ill make a discord bot that just chills with me in chat LOL
+And just voice command it to change songs and set reminder timers
+Im also building a database of all the ranked comps and classes capabilities and strong pairings. That way i just apply an LLM representative through a vector database to interpreting and providing players in real time with whatever stupid strat i made 2 months ago and current standings generally of classes and certain approaches to killing certain teams that are very metab
+Given a couple months when im feeling less lazy i can prolly even reliably voice clone myself for it lmao
+Aldoraz — 9:56 AM
+do you finish projects or do you just keep making new ones
+cause i feel like your trying to do to much
+Evonaut — 9:56 AM
+Yes
+Evonaut — 9:56 AM
+I make a thought and then i tag a friend to it. Then when i spend time with them i work on that certain project LOL
+That way eventually i get like 5 things done at once in a whole anime trainiming arc
+Congratulations on being DDR friend and swtor tier list rant friend
+Aldoraz — 9:59 AM
+haha fair enough
+that is an interesting scheduling process but i can see how it works
+I still feel like atleast with the tapping your just making it harder on yourself but as long as your having fun that is what matters
+Evonaut — 10:02 AM
+I think it becomes i credibly co voluted list of combos for contigencies. And if you take the time for it sure it can work and maybe even get to the point of being a small boon. But the project choice itself is poor investment lmfao 
+
+Its OCD ergonomics, binding vowed modes of certain gestures ans communications per character and then altering what it means for their abilities er game and app
+Im trying my darndest to just file edit my UI keybinding list per barb
+Bar
+That way i can submit my input and keybinding conversion per characters ky with ever sifting through that setting set up and modifying the event listeners 1 by 1
+Evonaut — 10:09 AM
+the one im most excited about is doing delayed jabs combos and sending them through as retaliations through out a ravage or basic attack used on a sniper or someone rolling. Just being able to do that naturally and glancery and have the ability to hop to any target at any moment still be an options that forever at my finger tips once i get used to all the beats and percussions of each class lmfao 
+i need to have one finger thats committted to canceling sequences or seningdthem early to speed up response times and make sure that i can execute multiple quick time events at once
+so that 2-3 commbos of rhythym can be attested to at most times through out the game but always atleast a base rhythym applied to each 1.4 - 1.5 gcd
+Aldoraz — 10:15 AM
+also inputting all these every gcd sounds like it could be hard
+channel your inner drummer i guess
+Evonaut — 10:16 AM
+it could
+but i think thats the point
+doing it any other way seems too cheap y afeel me?
+i should be putting in the work for my abilities and targetting and plays
+still show that i got it and know what im doing and am the one reacting to my enviornment but im simply very prepared for what that enviornment might bring and need of me rhythmically
+i gonna turn jugg tank into a valor bard Aldo
+a bladesinger more likely
+Aldoraz — 10:18 AM
+are you doing this just so you can play your favourite dnd class
+is this what this is all about evo
+Evonaut — 10:18 AM
+level 2 hexblade, 7 bladesinger, 3 battlemaster, 2 rogue, 3 paladin oath of vengeance type mf
+if we are being specific
+Aldoraz — 10:19 AM
+go play baldurs gate 3
+Evonaut — 10:20 AM
+listen aldo i let my fantasies leak over into each other's projects
+and suddenly they inspire a collective genius
+it just takes like 1 or 2 years of me being weird
+i just be doing this on the weekend poisoning the minds of the young youths with triple tunnel comp and volt rush tactical for maximum insult to injury
+Nate asked me how long he thinks ill take to actually come back and he laughed when i said "prolly 2 months i gotta be weird for a bit first"
+i think im gonna use a dial for my left side pinky
+and mave that dial modulate the 5 modes (normal, alt, shift, shift + alt, ctrl )
+Aldoraz — 10:23 AM
+What you really need is a foot pedal to channel your inner drummer
+Evonaut — 10:23 AM
+and these coded sequences actually all send to a base naked  ABC, 123, or punctuations
+Evonaut — 10:23 AM
+DONT YOU WORRY ALDO BHAHAHAHAHA
+im gettting a foot pedal
+Aldoraz — 10:24 AM
+I'm honestly not surprised I was only half joking about that
+Evonaut — 10:24 AM
+youre gonna die laughing when you see whatever gamer chair desk setp monstrosity i come back with
+thatll prolly take 3-5 months tho
+my brain just has lil side quest projects
+Evonaut — 10:26 AM
+and ill finalize all the sequences as naked inputs in their end because then we never run into pain of contradictions and the actual limitations of alt, shift, alt + shift, ctrl
+in stead i just optimize usage of  of the 60 ish keyboards a compute rnaturally offers
+Aldoraz — 10:27 AM
+Yeah true also I was about to say using 2 buttons at the same time giving conflicting input but I guess that isn't a problem for you as you can't input different actions at the same time
+Evonaut — 10:27 AM
+i wonder if someone whil just hire me at a mouse company if i just do this and show them it on github lmao
+yeah there might be so emgency double inputs but i have to fully confirm the factions of responsibility input sthey represent never clash in the consequence of inactivity to th eother one
+there is def some way we can compromise on a more compelx algorythim to prepare for two - 5 scenarios in a game where the full execution of somthing can be saved to a unique input epseically if we dont wannna do anything special in between these
+am i slowly winning you over to my madness aldo?
+the simple FOOLISHNESS i am abt to get up to
+Evonaut — 10:36 AM
+maybe i even up my frequency of result outcomes by making use of 1[double click, second press is a long press], 2[triple click, long press on the third]
+i prolly end up in reality with like 120 keybinds but they all control like 60 actual keybinds
+this will actually help me with the finger dexterity i need to keep devloping anyways for my ASL n shit lmfao bro that fucking sign spelling is HARD to do fast
+me showing up to handle douple AP
+Evonaut — 10:44 AM
+This is where the bots come into too cuz i just set up them on a simple rotation of differet classes and practice gaurd swaps and swaps against all sorts of different comps while focusing on damagae and even damage focus 
+
+a reaction dcd thing on the bots to fluctuate feasible dcd's being rolled out on swaps
+the point wont be to get to perfect rhythyms and determinitive choreography but to realize and get in tune with the different paces and rhythyms of damage classes coming to stepp up to the plate to do damage to your team. 
+
+at the end of the day they should just be reactionary taps  that lead to appropriate outcomes for what we see coming up up in the next 300-450MS  to finalize what inputs it sends out as youre seeing a situation unfold infront of you and you opt for certain impacts 
+
+marauders will be interesting cuz ill have to learn to swap of them in a few different ways i feel as carnage when paired with something else
+Aldoraz — 10:50 AM
+I still think your crazy your not winning me over
+Evonaut — 10:50 AM
+BAHAHAHA
+just you wait
+2 months from now youll be horrified
+at what ever freakshow circus ive come up with
+Aldoraz — 10:50 AM
+I'm sure I will
+120 keybinds is a lot though it's going to be hard to remember all the inputs
+Evonaut — 10:51 AM
+ill have sean raging at me when ever i say "hey alexa set a timer for 45 seconds for their next carb"
+Evonaut — 10:51 AM
+its my training to be the marching band boy for world pvp in GW2 with that firebrand class lol
+Aldoraz — 10:52 AM
+Especially when it's per class even if some things are standidized
+Evonaut — 10:52 AM
+in a way yes but ive weirdly never struggled with my memory of personally made gesture combos
+Aldoraz — 10:52 AM
+Guess you just have to train the muscles memory vs bots
+Evonaut — 10:53 AM
+yeah exactly
+all i need is a day in advance to try out a rhythym and then if i just shift between them every now and then every couple of days
+i can also teach players how to act like teams and combo their cleave phases and then awe/stun/kite/knock phases
+give ppl time prior to matches to consider how theyd set up their targetting systems to follow the pace of th eplays they wanna accomplish next
+Aldoraz — 10:59 AM
+Yeah it would be interesting to see how players actually act vs   them and when put in the actual environment if it is functionally different
+Evonaut — 11:02 AM
+it can simulate lightly certain comps behaviors we have to discuss and visualize how will we be having to react to them. 
+
+it brings prence of mind naturally to be listening in on the times when dps have burst and how it ise that they choose to dish it out combo wise and target wise
+helps make guard swapping academics a bit more habitual
+for someone that wants to practice to a s mall degree getting comfy with the classes default uptimes on burst
+Aldoraz — 11:03 AM
+Yeah that is pretty big tbh
+The timings of burst can be important on some classes especially like rage and carnage and arsenal
