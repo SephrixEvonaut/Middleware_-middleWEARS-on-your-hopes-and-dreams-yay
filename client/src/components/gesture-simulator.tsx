@@ -204,12 +204,22 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
     let attemptedGesture: GestureType | null = null;
 
     // Determine what gesture was attempted based on duration and press count
-    if (duration >= currentSettings.chargeMinHold) {
-      // User was attempting charge-release (regardless of success)
-      attemptedGesture = "charge_release";
-      
-      if (duration <= currentSettings.chargeMaxHold) {
-        // Successful charge-release
+    // Priority: long_press first, then charge_release, then multi-press
+    if (duration >= currentSettings.longPressMin && duration <= currentSettings.longPressMax) {
+      // Successful long press (150-500ms window)
+      attemptedGesture = "long_press";
+      gesture = "long_press";
+      pressCountRef.current = 0;
+      setPressCount(0);
+      setChargeLevel(0);
+      if (currentDebugMode) {
+        console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
+      }
+    } else if (duration > currentSettings.longPressMax) {
+      // Beyond long press window - check for charge-release or failed long press
+      if (duration >= currentSettings.chargeMinHold && duration <= currentSettings.chargeMaxHold) {
+        // Successful charge-release (> longPressMax, within chargeMaxHold)
+        attemptedGesture = "charge_release";
         gesture = "charge_release";
         const chargeDuration = duration - currentSettings.chargeMinHold;
         const chargeWindow = currentSettings.chargeMaxHold - currentSettings.chargeMinHold;
@@ -220,35 +230,23 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
         if (currentDebugMode) {
           console.log(`[RELEASE] Charge-Release detected - Duration: ${duration}ms, Charge: ${detectedChargeLevel}% (${currentSettings.chargeMinHold}-${currentSettings.chargeMaxHold}ms window)`);
         }
+      } else if (duration < currentSettings.chargeMinHold) {
+        // Failed long press (exceeded longPressMax but not long enough for charge)
+        attemptedGesture = "long_press";
+        pressCountRef.current = 0;
+        setPressCount(0);
+        setChargeLevel(0);
+        if (currentDebugMode) {
+          console.log(`[RELEASE] Failed long press - Duration ${duration}ms exceeds longPressMax (${currentSettings.longPressMax}ms) but below chargeMinHold (${currentSettings.chargeMinHold}ms)`);
+        }
       } else {
-        // Failed charge-release (held too long)
+        // Failed charge-release (held too long, > chargeMaxHold)
+        attemptedGesture = "charge_release";
         pressCountRef.current = 0;
         setPressCount(0);
         setChargeLevel(0);
         if (currentDebugMode) {
           console.log(`[RELEASE] Failed charge-release - Duration ${duration}ms exceeds chargeMaxHold (${currentSettings.chargeMaxHold}ms)`);
-        }
-      }
-    } else if (duration >= currentSettings.longPressMin) {
-      // User was attempting long press (regardless of success)
-      attemptedGesture = "long_press";
-      
-      if (duration <= currentSettings.longPressMax) {
-        // Successful long press
-        gesture = "long_press";
-        pressCountRef.current = 0;
-        setPressCount(0);
-        setChargeLevel(0);
-        if (currentDebugMode) {
-          console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
-        }
-      } else {
-        // Failed long press (held too long, not long enough for charge)
-        pressCountRef.current = 0;
-        setPressCount(0);
-        setChargeLevel(0);
-        if (currentDebugMode) {
-          console.log(`[RELEASE] Failed long press - Duration ${duration}ms exceeds longPressMax (${currentSettings.longPressMax}ms)`);
         }
       }
     } else {
@@ -417,9 +415,9 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
 
     const presets: Record<string, Partial<GestureSettings>> = {
       tight: {
-        multiPressWindow: 250,
-        longPressMin: 120,
-        longPressMax: 400,
+        multiPressWindow: 200,
+        longPressMin: 100,
+        longPressMax: 300,
         debounceDelay: 5,
         chargeMinHold: 250,
         chargeMaxHold: 1500,
@@ -437,7 +435,7 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
       relaxed: {
         multiPressWindow: 500,
         longPressMin: 200,
-        longPressMax: 700,
+        longPressMax: 800,
         debounceDelay: 15,
         chargeMinHold: 400,
         chargeMaxHold: 2500,
@@ -537,6 +535,16 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
                     <span className="text-xs text-muted-foreground">Learning</span>
                   </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyPreset("medium")}
+                  data-testid="button-reset-timing-defaults"
+                  className="w-full"
+                >
+                  <RotateCcw className="w-3 h-3 mr-2" />
+                  Reset to Defaults
+                </Button>
               </div>
 
               <div className="grid gap-6">
@@ -875,6 +883,7 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
                       <Badge 
                         variant={successRate >= 80 ? "default" : successRate >= 60 ? "secondary" : "outline"}
                         className="text-xs"
+                        data-testid={`accuracy-${gestureType}`}
                       >
                         {successRate}%
                       </Badge>
@@ -887,7 +896,11 @@ export function GestureSimulator({ settings, onSettingsChange }: GestureSimulato
                         />
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground font-mono">
-                        <span>{successes} / {attempts}</span>
+                        <span>
+                          <span data-testid={`successes-${gestureType}`}>{successes}</span>
+                          {" / "}
+                          <span data-testid={`attempts-${gestureType}`}>{attempts}</span>
+                        </span>
                         <span>{attempts} attempts</span>
                       </div>
                     </div>

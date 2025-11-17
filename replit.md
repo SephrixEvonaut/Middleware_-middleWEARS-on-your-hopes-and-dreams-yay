@@ -87,10 +87,11 @@ A comprehensive web-based configuration management system for designing, testing
 - **Performance** - Optimized interval cleanup, 10ms update rate
 
 ### ✅ Phase 5: Practice Range Enhancement (Completed - November 17, 2025)
-- **Inline Timing Controls** - Collapsible panel in Test Gestures tab with 8 parameters
-  - Multi-press window (50-1000ms, default 350ms)
+- **Inline Timing Controls** - Collapsible panel in Test Gestures tab with 7 parameters
+  - Multi-press window (100-1000ms, default 350ms)
   - Long press min/max (50-2000ms, default 150-500ms)
   - Debounce delay (0-50ms, default 10ms)
+  - Charge min/max hold (100-3000ms, default 300-2000ms)
   - Output key padding (0-200ms, default 25ms) - Critical for SWTOR/MMO input reliability
 - **MS-Precision Sliders** - Dual +/- spinners with 1ms increment precision
 - **Timing Presets** - Quick load Competitive/Balanced/Learning profiles
