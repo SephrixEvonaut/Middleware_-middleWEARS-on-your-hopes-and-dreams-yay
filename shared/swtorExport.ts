@@ -13,10 +13,11 @@ export const SAFE_KEYS = [
   // Function keys (12)
   "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
   
-  // Navigation (6 - excluding Home/End/PageUp/PageDown/Insert)
+  // Navigation (8)
   "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+  "Home", "End", "PageUp", "PageDown",
   
-  // Punctuation (14 - commonly used, safe for SWTOR)
+  // Punctuation and special (12 including Space)
   "`", "-", "=", "[", "]", "\\", ";", "'", ",", ".", "/",
   "Space",
 ] as const;

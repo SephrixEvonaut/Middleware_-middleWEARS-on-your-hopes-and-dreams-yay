@@ -120,9 +120,15 @@ A comprehensive web-based configuration management system for designing, testing
 - Anti-cheat compliance strategy documented (Vanguard, EAC, BattlEye)
 
 ### ✅ SWTOR Keybind Export System (Completed - November 17, 2025)
-- **Safe Key Translation** - Maps gesture outputs to 68 safe keyboard keys (excludes Alt/Shift/Ctrl/Windows/Tab/Capslock/Escape/Delete/PrtScrn/Enter/Backspace)
+- **Safe Key Translation** - Maps gesture outputs to 68 safe keyboard keys (excludes Alt/Shift/Ctrl/Windows/Tab/Capslock/Escape/Delete/PrtScrn/Enter/Backspace/Insert)
+  - 26 letters (A-Z)
+  - 10 numbers (0-9)
+  - 12 function keys (F1-F12)
+  - 8 navigation keys (arrows, Home, End, PageUp, PageDown)
+  - 12 punctuation/special (backtick, dash, equals, brackets, backslash, semicolon, quote, comma, period, slash, Space)
 - **XML Generator** - Creates valid SWTOR KeyBindings XML files with proper structure (`<Action>`, `<Primary>`, `<Secondary>`)
 - **Collision Detection** - Warns when mappings exceed 68-key limit
+- **Empty State Messaging** - Clear guidance when no input mappings configured
 - **Export UI** - Collapsible sidebar panel with character name input, XML preview modal, copy-to-clipboard, and download functionality
 - **File Location** - Generates XML ready for `C:\Users\USERNAME\AppData\Local\SWTOR\swtor\settings\Keybindings\`
 - **Multi-Mode Support** - Foundation for 5 modifier modes (Normal, Ctrl, Shift, Shift+Alt, Ctrl+Alt)
