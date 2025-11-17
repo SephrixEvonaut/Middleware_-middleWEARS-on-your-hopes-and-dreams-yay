@@ -247,7 +247,10 @@ export default function Home({
 
           <TabsContent value="test" data-testid="tab-content-test">
             <div className="space-y-6">
-              <GestureSimulator settings={currentProfile.gestureSettings} />
+              <GestureSimulator 
+                settings={currentProfile.gestureSettings}
+                onSettingsChange={(gestureSettings) => handleProfileChange({ gestureSettings })}
+              />
               <ModifierToggle
                 modifierState={modifierState}
                 onToggleModifier={toggleModifier}

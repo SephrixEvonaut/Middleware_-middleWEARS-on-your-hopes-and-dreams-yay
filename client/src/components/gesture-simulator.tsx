@@ -2,15 +2,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Activity, RotateCcw, Bug } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Activity, RotateCcw, Bug, Settings2, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import type { GestureSettings, GestureType, GestureEvent } from "@shared/schema";
+import { TimingControl } from "./timing-control";
 
 interface GestureSimulatorProps {
   settings: GestureSettings;
+  onSettingsChange?: (settings: GestureSettings) => void;
 }
 
-export function GestureSimulator({ settings }: GestureSimulatorProps) {
+export function GestureSimulator({ settings, onSettingsChange }: GestureSimulatorProps) {
   const [events, setEvents] = useState<GestureEvent[]>([]);
   const [pressCount, setPressCount] = useState(0);
   const [currentDuration, setCurrentDuration] = useState(0);
@@ -18,12 +21,33 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   const [isPressed, setIsPressed] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [chargeLevel, setChargeLevel] = useState(0);
+  const [timingControlsOpen, setTimingControlsOpen] = useState(false);
   
   // Tap analytics state
   const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
   const [currentTPS, setCurrentTPS] = useState(0);
   const [peakTPS, setPeakTPS] = useState(0);
   const [tapIntervals, setTapIntervals] = useState<number[]>([]);
+  
+  // Practice statistics
+  const [gestureAttempts, setGestureAttempts] = useState<Record<GestureType, number>>({
+    single_press: 0,
+    double_press: 0,
+    triple_press: 0,
+    quadruple_press: 0,
+    long_press: 0,
+    cancel_and_hold: 0,
+    charge_release: 0,
+  });
+  const [gestureSuccesses, setGestureSuccesses] = useState<Record<GestureType, number>>({
+    single_press: 0,
+    double_press: 0,
+    triple_press: 0,
+    quadruple_press: 0,
+    long_press: 0,
+    cancel_and_hold: 0,
+    charge_release: 0,
+  });
   
   // Use refs for timing-critical values to avoid stale closures
   const pressStartRef = useRef<number | null>(null);
@@ -34,6 +58,7 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
   const lastDebounceRef = useRef<number>(0);
   const settingsRef = useRef<GestureSettings>(settings);
   const debugModeRef = useRef<boolean>(debugMode);
+  const targetGestureRef = useRef<GestureType | null>(null);
 
   // Sync refs with props (state refs are updated synchronously in handlers)
   useEffect(() => {
@@ -108,12 +133,27 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       const newCount = pressCountRef.current + 1;
       pressCountRef.current = newCount; // Update ref synchronously
       setPressCount(newCount);
+      
+      // Track target gesture for statistics (what the user is attempting)
+      switch (newCount) {
+        case 2:
+          targetGestureRef.current = "double_press";
+          break;
+        case 3:
+          targetGestureRef.current = "triple_press";
+          break;
+        case 4:
+          targetGestureRef.current = "quadruple_press";
+          break;
+      }
+      
       if (currentDebugMode) {
-        console.log(`[PRESS] Multi-press detected - Count: ${newCount}, Time since last: ${timeSinceLastPress}ms`);
+        console.log(`[PRESS] Multi-press detected - Count: ${newCount}, Time since last: ${timeSinceLastPress}ms, Target: ${targetGestureRef.current}`);
       }
     } else {
       pressCountRef.current = 1; // Update ref synchronously
       setPressCount(1);
+      targetGestureRef.current = null; // Reset target for new sequence
       if (currentDebugMode) {
         console.log(`[PRESS] New press sequence started - Time since last: ${timeSinceLastPress}ms`);
       }
@@ -161,31 +201,70 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
 
     let gesture: GestureType | null = null;
     let detectedChargeLevel = 0;
+    let attemptedGesture: GestureType | null = null;
 
-    // Check for Charge-Release gesture (priority before long press)
-    if (duration >= currentSettings.chargeMinHold && duration <= currentSettings.chargeMaxHold) {
-      gesture = "charge_release";
-      const chargeDuration = duration - currentSettings.chargeMinHold;
-      const chargeWindow = currentSettings.chargeMaxHold - currentSettings.chargeMinHold;
-      detectedChargeLevel = Math.round((chargeDuration / chargeWindow) * 100);
-      setChargeLevel(detectedChargeLevel);
-      pressCountRef.current = 0;
-      setPressCount(0);
-      if (currentDebugMode) {
-        console.log(`[RELEASE] Charge-Release detected - Duration: ${duration}ms, Charge: ${detectedChargeLevel}% (${currentSettings.chargeMinHold}-${currentSettings.chargeMaxHold}ms window)`);
+    // Determine what gesture was attempted based on duration and press count
+    if (duration >= currentSettings.chargeMinHold) {
+      // User was attempting charge-release (regardless of success)
+      attemptedGesture = "charge_release";
+      
+      if (duration <= currentSettings.chargeMaxHold) {
+        // Successful charge-release
+        gesture = "charge_release";
+        const chargeDuration = duration - currentSettings.chargeMinHold;
+        const chargeWindow = currentSettings.chargeMaxHold - currentSettings.chargeMinHold;
+        detectedChargeLevel = Math.round((chargeDuration / chargeWindow) * 100);
+        setChargeLevel(detectedChargeLevel);
+        pressCountRef.current = 0;
+        setPressCount(0);
+        if (currentDebugMode) {
+          console.log(`[RELEASE] Charge-Release detected - Duration: ${duration}ms, Charge: ${detectedChargeLevel}% (${currentSettings.chargeMinHold}-${currentSettings.chargeMaxHold}ms window)`);
+        }
+      } else {
+        // Failed charge-release (held too long)
+        pressCountRef.current = 0;
+        setPressCount(0);
+        setChargeLevel(0);
+        if (currentDebugMode) {
+          console.log(`[RELEASE] Failed charge-release - Duration ${duration}ms exceeds chargeMaxHold (${currentSettings.chargeMaxHold}ms)`);
+        }
       }
-    } else if (duration >= currentSettings.longPressMin && duration <= currentSettings.longPressMax) {
-      gesture = "long_press";
-      pressCountRef.current = 0; // Update ref synchronously
-      setPressCount(0);
-      setChargeLevel(0);
-      if (currentDebugMode) {
-        console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
+    } else if (duration >= currentSettings.longPressMin) {
+      // User was attempting long press (regardless of success)
+      attemptedGesture = "long_press";
+      
+      if (duration <= currentSettings.longPressMax) {
+        // Successful long press
+        gesture = "long_press";
+        pressCountRef.current = 0;
+        setPressCount(0);
+        setChargeLevel(0);
+        if (currentDebugMode) {
+          console.log(`[RELEASE] Long press detected - Duration: ${duration}ms (${currentSettings.longPressMin}-${currentSettings.longPressMax}ms window)`);
+        }
+      } else {
+        // Failed long press (held too long, not long enough for charge)
+        pressCountRef.current = 0;
+        setPressCount(0);
+        setChargeLevel(0);
+        if (currentDebugMode) {
+          console.log(`[RELEASE] Failed long press - Duration ${duration}ms exceeds longPressMax (${currentSettings.longPressMax}ms)`);
+        }
       }
-    } else if (duration < currentSettings.longPressMin) {
+    } else {
+      // Quick tap - attempting multi-press gesture
       setChargeLevel(0);
-      // Use ref to get current count to avoid stale closure
       const currentCount = pressCountRef.current;
+      
+      // Use target gesture for attempt tracking (handles failed multi-press)
+      // If target is set, user was attempting that gesture (may have failed due to timing)
+      if (targetGestureRef.current) {
+        attemptedGesture = targetGestureRef.current;
+      } else if (currentCount === 1) {
+        attemptedGesture = "single_press";
+      }
+      
+      // Determine successful gesture based on current press count
       switch (currentCount) {
         case 1:
           gesture = "single_press";
@@ -199,34 +278,46 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
         case 4:
           gesture = "quadruple_press";
           break;
+        default:
+          // No valid press count
+          break;
       }
       
       if (currentDebugMode) {
-        console.log(`[RELEASE] ${gesture || 'No gesture'} detected - Duration: ${duration}ms, Press count: ${currentCount}`);
+        console.log(`[RELEASE] ${gesture || 'No gesture'} detected - Duration: ${duration}ms, Press count: ${currentCount}, Target: ${targetGestureRef.current}, Attempted: ${attemptedGesture}`);
       }
       
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        pressCountRef.current = 0; // Update ref synchronously
+        pressCountRef.current = 0;
         setPressCount(0);
+        // Don't clear targetGestureRef here - we need it for handleRelease
       }, currentSettings.multiPressWindow);
-    } else {
-      // Duration exceeded chargeMaxHold - reset everything
-      pressCountRef.current = 0;
-      setPressCount(0);
-      setChargeLevel(0);
-      if (currentDebugMode) {
-        console.log(`[RELEASE] Duration ${duration}ms exceeds chargeMaxHold (${currentSettings.chargeMaxHold}ms) - No gesture detected, count reset`);
-      }
     }
 
+    // Track attempt (always, regardless of success)
+    if (attemptedGesture) {
+      setGestureAttempts(prev => ({
+        ...prev,
+        [attemptedGesture]: prev[attemptedGesture] + 1,
+      }));
+    }
+
+    // Track success (only when gesture detected)
     if (gesture) {
       setDetectedGesture(gesture);
+      setGestureSuccesses(prev => ({
+        ...prev,
+        [gesture]: prev[gesture] + 1,
+      }));
       setTimeout(() => {
         setDetectedGesture(null);
         setChargeLevel(0);
       }, 2000);
     }
+
+    // Clear target gesture after tracking (done with this release)
+    targetGestureRef.current = null;
 
     const event: GestureEvent = {
       timestamp: now,
@@ -263,11 +354,31 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
     setIsPressed(false);
     pressStartRef.current = null;
     lastPressRef.current = 0; // Reset for clean analytics baseline
+    targetGestureRef.current = null; // Clear target gesture
     // Reset tap analytics
     setTapTimestamps([]);
     setCurrentTPS(0);
     setPeakTPS(0);
     setTapIntervals([]);
+    // Reset practice statistics
+    setGestureAttempts({
+      single_press: 0,
+      double_press: 0,
+      triple_press: 0,
+      quadruple_press: 0,
+      long_press: 0,
+      cancel_and_hold: 0,
+      charge_release: 0,
+    });
+    setGestureSuccesses({
+      single_press: 0,
+      double_press: 0,
+      triple_press: 0,
+      quadruple_press: 0,
+      long_press: 0,
+      cancel_and_hold: 0,
+      charge_release: 0,
+    });
     if (timerRef.current) clearTimeout(timerRef.current);
   };
 
@@ -295,6 +406,48 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
 
   const currentChargeLevel = isPressed ? getCurrentChargeLevel() : chargeLevel;
 
+  const updateSetting = (key: keyof GestureSettings, value: number) => {
+    if (onSettingsChange) {
+      onSettingsChange({ ...settings, [key]: value });
+    }
+  };
+
+  const applyPreset = (preset: "tight" | "medium" | "relaxed") => {
+    if (!onSettingsChange) return;
+
+    const presets: Record<string, Partial<GestureSettings>> = {
+      tight: {
+        multiPressWindow: 250,
+        longPressMin: 120,
+        longPressMax: 400,
+        debounceDelay: 5,
+        chargeMinHold: 250,
+        chargeMaxHold: 1500,
+        outputKeyPadding: 20,
+      },
+      medium: {
+        multiPressWindow: 350,
+        longPressMin: 150,
+        longPressMax: 500,
+        debounceDelay: 10,
+        chargeMinHold: 300,
+        chargeMaxHold: 2000,
+        outputKeyPadding: 25,
+      },
+      relaxed: {
+        multiPressWindow: 500,
+        longPressMin: 200,
+        longPressMax: 700,
+        debounceDelay: 15,
+        chargeMinHold: 400,
+        chargeMaxHold: 2500,
+        outputKeyPadding: 35,
+      },
+    };
+
+    onSettingsChange({ ...settings, ...presets[preset] });
+  };
+
   return (
     <Card className="border-card-border" data-testid="card-gesture-simulator">
       <CardHeader data-testid="header-simulator">
@@ -304,8 +457,8 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
               <Activity className="w-5 h-5 text-primary" data-testid="icon-simulator" />
             </div>
             <div>
-              <CardTitle className="text-lg">Gesture Pattern Simulator</CardTitle>
-              <CardDescription className="text-sm">Press SPACE to test gesture detection</CardDescription>
+              <CardTitle className="text-lg">Practice Range</CardTitle>
+              <CardDescription className="text-sm">Press SPACE to test gesture detection with real-time tuning</CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -332,6 +485,148 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {/* Timing Controls Panel */}
+        {onSettingsChange && (
+          <Collapsible open={timingControlsOpen} onOpenChange={setTimingControlsOpen} data-testid="collapsible-timing-controls">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between" data-testid="button-toggle-timing-controls">
+                <div className="flex items-center gap-2">
+                  <Settings2 className="w-4 h-4" />
+                  <span>Timing Controls</span>
+                  <Badge variant="secondary" className="text-xs">1ms precision</Badge>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${timingControlsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4 p-4 bg-muted/20 rounded-lg border border-border">
+              {/* Timing Presets */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Quick Presets</span>
+                  <Badge variant="outline" className="text-xs">One-click timing profiles</Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyPreset("tight")}
+                    data-testid="button-preset-tight"
+                    className="flex flex-col h-auto py-2"
+                  >
+                    <span className="font-semibold">Tight</span>
+                    <span className="text-xs text-muted-foreground">Competitive</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyPreset("medium")}
+                    data-testid="button-preset-medium"
+                    className="flex flex-col h-auto py-2"
+                  >
+                    <span className="font-semibold">Medium</span>
+                    <span className="text-xs text-muted-foreground">Balanced</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyPreset("relaxed")}
+                    data-testid="button-preset-relaxed"
+                    className="flex flex-col h-auto py-2"
+                  >
+                    <span className="font-semibold">Relaxed</span>
+                    <span className="text-xs text-muted-foreground">Learning</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-6">
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Gesture Detection</h4>
+                  <div className="space-y-4">
+                    <TimingControl
+                      label="Multi-Press Window"
+                      value={settings.multiPressWindow}
+                      min={100}
+                      max={1000}
+                      onChange={(value) => updateSetting('multiPressWindow', value)}
+                      description="Time window to detect consecutive taps"
+                    />
+                    <TimingControl
+                      label="Long Press Min"
+                      value={settings.longPressMin}
+                      min={50}
+                      max={500}
+                      onChange={(value) => updateSetting('longPressMin', value)}
+                      description="Minimum hold time for long press"
+                    />
+                    <TimingControl
+                      label="Long Press Max"
+                      value={settings.longPressMax}
+                      min={100}
+                      max={1000}
+                      onChange={(value) => updateSetting('longPressMax', value)}
+                      description="Maximum long press window"
+                    />
+                    <TimingControl
+                      label="Debounce Delay"
+                      value={settings.debounceDelay}
+                      min={0}
+                      max={50}
+                      onChange={(value) => updateSetting('debounceDelay', value)}
+                      description="Hardware bounce suppression"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Charge-Release</h4>
+                  <div className="space-y-4">
+                    <TimingControl
+                      label="Charge Min Hold"
+                      value={settings.chargeMinHold}
+                      min={100}
+                      max={1000}
+                      onChange={(value) => updateSetting('chargeMinHold', value)}
+                      description="Minimum hold to start charging"
+                    />
+                    <TimingControl
+                      label="Charge Max Hold"
+                      value={settings.chargeMaxHold}
+                      min={500}
+                      max={5000}
+                      onChange={(value) => updateSetting('chargeMaxHold', value)}
+                      description="Maximum charge window (100%)"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Output Sequence</h4>
+                  <div className="space-y-4">
+                    <TimingControl
+                      label="Key Padding"
+                      value={settings.outputKeyPadding}
+                      min={0}
+                      max={200}
+                      onChange={(value) => updateSetting('outputKeyPadding', value)}
+                      description="Delay between keypress outputs (prevents SWTOR input drops)"
+                    />
+                  </div>
+                  <div className="mt-3 p-3 bg-primary/5 rounded-md border border-primary/20">
+                    <div className="flex items-start gap-2">
+                      <Activity className="w-4 h-4 text-primary mt-0.5" />
+                      <div className="text-xs text-muted-foreground">
+                        <strong className="text-foreground">Output Padding:</strong> Adds {settings.outputKeyPadding}ms delay between consecutive keypresses.
+                        Recommended 25-50ms for SWTOR to prevent dropped inputs during combo sequences.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         {/* Current Gesture Display */}
         <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-lg border border-border" data-testid="display-current-gesture">
           <div className="flex items-center gap-4 mb-4">
@@ -552,6 +847,82 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
             </div>
           )}
         </div>
+
+        {/* Practice Statistics */}
+        {Object.values(gestureAttempts).some(count => count > 0) && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Practice Statistics</h4>
+              <Badge variant="secondary" className="text-xs">Session Tracking</Badge>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {(Object.keys(gestureAttempts) as GestureType[]).map((gestureType) => {
+                const attempts = gestureAttempts[gestureType];
+                const successes = gestureSuccesses[gestureType];
+                const successRate = attempts > 0 ? Math.round((successes / attempts) * 100) : 0;
+                
+                if (attempts === 0) return null;
+                
+                return (
+                  <div 
+                    key={gestureType}
+                    className="p-3 bg-muted/20 rounded-md border border-border"
+                    data-testid={`stat-${gestureType}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium capitalize">{gestureType.replace(/_/g, " ")}</span>
+                      <Badge 
+                        variant={successRate >= 80 ? "default" : successRate >= 60 ? "secondary" : "outline"}
+                        className="text-xs"
+                      >
+                        {successRate}%
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all ${successRate >= 80 ? 'bg-green-500' : successRate >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          style={{ width: `${successRate}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground font-mono">
+                        <span>{successes} / {attempts}</span>
+                        <span>{attempts} attempts</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Overall Statistics */}
+            <div className="p-4 bg-primary/5 rounded-md border border-primary/20">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Total Attempts</div>
+                  <div className="text-xl font-mono font-bold">
+                    {Object.values(gestureAttempts).reduce((a, b) => a + b, 0)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Successful</div>
+                  <div className="text-xl font-mono font-bold text-green-500">
+                    {Object.values(gestureSuccesses).reduce((a, b) => a + b, 0)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Overall Rate</div>
+                  <div className="text-xl font-mono font-bold">
+                    {Object.values(gestureAttempts).reduce((a, b) => a + b, 0) > 0
+                      ? Math.round((Object.values(gestureSuccesses).reduce((a, b) => a + b, 0) / Object.values(gestureAttempts).reduce((a, b) => a + b, 0)) * 100)
+                      : 0}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Event History */}
         <div className="space-y-2">
