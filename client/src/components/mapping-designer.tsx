@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -11,8 +11,7 @@ import {
   type DragStartEvent,
   useDraggable,
   useDroppable,
-} from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+} from "@dnd-kit/core";import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Profile, InputMapping, GestureType } from "@shared/schema";
 import { ALL_KEYBOARD_KEYS } from "@shared/keyboardKeys";
@@ -55,6 +54,7 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedGesture, setSelectedGesture] = useState<GestureType>("single_press");
   const { modifierState } = useModifierContext();
+  const isUpdatingRef = useRef(false);
 
   const getCurrentModeName = (): string => {
     const { ctrl, shift, alt } = modifierState;
@@ -161,10 +161,12 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over) return;
+    if (!over || isUpdatingRef.current) return;
 
     const overId = over.id as string;
     const activeId = active.id as string;
+    
+    console.log('[DragEnd]', { activeId, overId, overData: over.data.current });
 
     // Case 1: Dragging from available inputs to action slot
     const activeInput = availableInputs.find((input) => input.id === activeId);
@@ -172,6 +174,25 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     
     if (activeInput && actionSlotMatch) {
       const slotId = parseInt(actionSlotMatch[1]);
+      
+      // Check if this exact combination already exists
+      const duplicateExists = profile.inputMappings.some(
+        (m) =>
+          m.deviceType === activeInput.deviceType &&
+          m.inputId === activeInput.inputId &&
+          m.gestureType === selectedGesture &&
+          m.actionSlot === slotId
+      );
+
+      if (duplicateExists) {
+        console.warn('Duplicate mapping prevented:', {
+          deviceType: activeInput.deviceType,
+          inputId: activeInput.inputId,
+          gestureType: selectedGesture,
+          actionSlot: slotId
+        });
+        return; // Prevent duplicate
+      }
       
       const newMapping: InputMapping = {
         id: `mapping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -184,14 +205,35 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
         actionSlot: slotId,
       };
 
-      onUpdate({ ...profile, inputMappings: [...profile.inputMappings, newMapping] });
+      // Create new mappings array and deduplicate
+      const newMappings = [...profile.inputMappings, newMapping];
+      const seen = new Set<string>();
+      const deduplicated = newMappings.filter(m => {
+        const key = `${m.deviceType}:${m.inputId}:${m.gestureType}:${m.actionSlot}`;
+        if (seen.has(key)) {
+          console.warn('Filtered duplicate mapping:', key);
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+
+      isUpdatingRef.current = true;
+      onUpdate({ ...profile, inputMappings: deduplicated });
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 500);
       return;
     }
 
     // Case 2: Dragging mapping to trash
     if (overId === "trash-zone" && activeId.startsWith("mapping-")) {
       const updatedMappings = profile.inputMappings.filter((m) => m.id !== activeId);
+      isUpdatingRef.current = true;
       onUpdate({ ...profile, inputMappings: updatedMappings });
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 500);
       return;
     }
 
@@ -217,7 +259,11 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
             const otherMappings = profile.inputMappings.filter((m) => (m.actionSlot ?? 5) !== activeSlot);
             const updatedMappings = [...otherMappings, ...reorderedSlotMappings];
             
+            isUpdatingRef.current = true;
             onUpdate({ ...profile, inputMappings: updatedMappings });
+            setTimeout(() => {
+              isUpdatingRef.current = false;
+            }, 500);
           }
         }
       }
@@ -266,7 +312,7 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
       <CardContent>
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={rectIntersection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
