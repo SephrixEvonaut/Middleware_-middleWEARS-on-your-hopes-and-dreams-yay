@@ -58,6 +58,7 @@ const modifierLabels: Record<string, string> = {
   ctrl_shift: "C+S",
   ctrl_alt: "C+A",
   shift_alt: "S+A",
+  ctrl_shift_alt: "C+S+A",
 };
 
 export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
@@ -79,12 +80,16 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     return "Normal";
   };
 
-  const getModifierHash = (): "normal" | "ctrl" | "shift" | "alt" | "ctrl_shift" | "ctrl_alt" | "shift_alt" => {
+  const getModifierHash = (): "normal" | "ctrl" | "shift" | "alt" | "ctrl_shift" | "ctrl_alt" | "shift_alt" | "ctrl_shift_alt" => {
     const { ctrl, shift, alt } = modifierState;
     if (!ctrl && !shift && !alt) return "normal";
+    // Check triple combination FIRST before pairs
+    if (ctrl && shift && alt) return "ctrl_shift_alt";
+    // Then check pairs
     if (ctrl && shift) return "ctrl_shift";
     if (ctrl && alt) return "ctrl_alt";
     if (shift && alt) return "shift_alt";
+    // Finally singles
     if (ctrl) return "ctrl";
     if (shift) return "shift";
     if (alt) return "alt";
@@ -183,22 +188,10 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     const { active, over } = event;
     setActiveId(null);
 
-    console.log('[MappingDesigner] handleDragEnd triggered', {
-      activeId: active.id,
-      overId: over?.id,
-      isUpdatingRef: isUpdatingRef.current,
-      hasOver: !!over
-    });
-
-    if (!over || isUpdatingRef.current) {
-      console.log('[MappingDesigner] Drag ended early - no valid drop target');
-      return;
-    }
+    if (!over || isUpdatingRef.current) return;
 
     const overId = over.id as string;
     const activeId = active.id as string;
-    
-    console.log('[MappingDesigner] DragEnd processing', { activeId, overId, overData: over.data.current });
 
     // Case 1: Dragging from available inputs to action slot
     const activeInput = availableInputs.find((input) => input.id === activeId);
@@ -207,14 +200,6 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     if (activeInput && actionSlotMatch) {
       const slotId = parseInt(actionSlotMatch[1]);
       const currentModifierHash = getModifierHash();
-      
-      console.log('[MappingDesigner] Creating new mapping:', {
-        input: activeInput.inputId,
-        gesture: selectedGesture,
-        modifierHash: currentModifierHash,
-        slotId,
-        slotName: actionSlots[slotId].name
-      });
       
       // Check if this exact combination already exists (including modifier mode)
       const duplicateExists = profile.inputMappings.some(
@@ -226,16 +211,7 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
           m.actionSlot === slotId
       );
 
-      if (duplicateExists) {
-        console.warn('[MappingDesigner] Duplicate mapping prevented:', {
-          deviceType: activeInput.deviceType,
-          inputId: activeInput.inputId,
-          gestureType: selectedGesture,
-          modifierHash: currentModifierHash,
-          actionSlot: slotId
-        });
-        return; // Prevent duplicate
-      }
+      if (duplicateExists) return; // Prevent duplicate
       
       const newMapping: InputMapping = {
         id: `mapping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -260,12 +236,6 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
         }
         seen.add(key);
         return true;
-      });
-
-      console.log('[MappingDesigner] Calling onUpdate with new mappings', {
-        oldCount: profile.inputMappings.length,
-        newCount: deduplicated.length,
-        newMapping: newMapping.id
       });
 
       isUpdatingRef.current = true;

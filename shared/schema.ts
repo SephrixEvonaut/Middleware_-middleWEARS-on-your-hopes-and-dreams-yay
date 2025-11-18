@@ -78,6 +78,7 @@ export const modifierModeSchema = z.enum([
   "ctrl_shift",
   "ctrl_alt",
   "shift_alt",
+  "ctrl_shift_alt",
 ]);
 
 export type ModifierMode = z.infer<typeof modifierModeSchema>;

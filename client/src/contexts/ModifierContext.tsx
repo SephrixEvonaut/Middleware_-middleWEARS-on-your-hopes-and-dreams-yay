@@ -59,6 +59,7 @@ export function ModifierProvider({ children, currentProfile }: ModifierProviderP
       ctrl_shift: { ctrl: true, shift: true, alt: false },
       ctrl_alt: { ctrl: true, shift: false, alt: true },
       shift_alt: { ctrl: false, shift: true, alt: true },
+      ctrl_shift_alt: { ctrl: true, shift: true, alt: true },
     };
     setModifierState(modeMap[mode]);
   };
