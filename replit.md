@@ -21,14 +21,15 @@ Core features include:
 - **Device Configuration Panels**: Dedicated interfaces for each supported device type.
 - **Gesture Settings**: Fine-grained control over timing parameters for gesture detection.
 - **Gesture Simulator**: Real-time testing with a timeline visualizer, event history, and debug mode.
-- **Mapping Designer**: Visual system for binding device inputs to game actions.
+- **Mapping Designer**: Visual system for binding device inputs to game actions with modifier-aware mapping identity.
 - **Profile Management**: Creation, selection, import, and export of configuration profiles (JSON/JavaScript).
 - **Modifier Toggle System**: Two-layer state management for modifiers (Ctrl, Shift, Alt) with presets and legal compliance.
+- **Modifier-Aware Mapping System**: Each mapping includes a `modifierHash` field that identifies which modifier combination was active when the mapping was created. Supports all 8 modifier combinations: normal, ctrl, shift, alt, ctrl_shift, ctrl_alt, shift_alt, ctrl_shift_alt. This allows the same physical input + gesture to map to different outputs depending on modifier mode.
 - **Hold Timer Visualization**: Real-time progress bar for hold duration with color-coded thresholds.
 - **Practice Range**: Inline timing controls with MS-precision sliders, timing presets (Competitive, Balanced, Learning), and real-time statistics (attempts, successes, accuracy).
-- **SWTOR Keybind Export System**: Generates valid SWTOR KeyBindings XML files with safe key translation and collision detection.
+- **SWTOR Keybind Export System**: Generates valid SWTOR KeyBindings XML files with modifier-mode filtering. Each modifier mode exports independently with unique safe key assignments. Validates that only 68 "bare naked keys" (excludes Alt/Shift/Ctrl/Win/Tab/Caps/Esc/Del/PrtScrn/Enter/Backspace/Insert) are used in final outputs for anti-cheat compliance.
 
-The architecture is designed for 1:1 input/output ratio compliance, essential for anti-cheat systems.
+The architecture is designed for 1:1 input/output ratio compliance, essential for anti-cheat systems. **Critical requirement fulfilled**: Modifiers operate at detection layer only - final game inputs never contain Alt/Shift/Ctrl to prevent interference with game keybinds.
 
 ## External Dependencies
 - **React**: Frontend library.
