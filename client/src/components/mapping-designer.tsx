@@ -50,6 +50,16 @@ const gestureLabels: Record<GestureType, string> = {
   charge_release: "Charge",
 };
 
+const modifierLabels: Record<string, string> = {
+  normal: "Normal",
+  ctrl: "Ctrl",
+  shift: "Shift",
+  alt: "Alt",
+  ctrl_shift: "C+S",
+  ctrl_alt: "C+A",
+  shift_alt: "S+A",
+};
+
 export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedGesture, setSelectedGesture] = useState<GestureType>("single_press");
@@ -67,6 +77,18 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     if (shift) return "Shift";
     if (alt) return "Alt";
     return "Normal";
+  };
+
+  const getModifierHash = (): "normal" | "ctrl" | "shift" | "alt" | "ctrl_shift" | "ctrl_alt" | "shift_alt" => {
+    const { ctrl, shift, alt } = modifierState;
+    if (!ctrl && !shift && !alt) return "normal";
+    if (ctrl && shift) return "ctrl_shift";
+    if (ctrl && alt) return "ctrl_alt";
+    if (shift && alt) return "shift_alt";
+    if (ctrl) return "ctrl";
+    if (shift) return "shift";
+    if (alt) return "alt";
+    return "normal";
   };
 
   const sensors = useSensors(
@@ -161,12 +183,22 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || isUpdatingRef.current) return;
+    console.log('[MappingDesigner] handleDragEnd triggered', {
+      activeId: active.id,
+      overId: over?.id,
+      isUpdatingRef: isUpdatingRef.current,
+      hasOver: !!over
+    });
+
+    if (!over || isUpdatingRef.current) {
+      console.log('[MappingDesigner] Drag ended early - no valid drop target');
+      return;
+    }
 
     const overId = over.id as string;
     const activeId = active.id as string;
     
-    console.log('[DragEnd]', { activeId, overId, overData: over.data.current });
+    console.log('[MappingDesigner] DragEnd processing', { activeId, overId, overData: over.data.current });
 
     // Case 1: Dragging from available inputs to action slot
     const activeInput = availableInputs.find((input) => input.id === activeId);
@@ -174,21 +206,32 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
     
     if (activeInput && actionSlotMatch) {
       const slotId = parseInt(actionSlotMatch[1]);
+      const currentModifierHash = getModifierHash();
       
-      // Check if this exact combination already exists
+      console.log('[MappingDesigner] Creating new mapping:', {
+        input: activeInput.inputId,
+        gesture: selectedGesture,
+        modifierHash: currentModifierHash,
+        slotId,
+        slotName: actionSlots[slotId].name
+      });
+      
+      // Check if this exact combination already exists (including modifier mode)
       const duplicateExists = profile.inputMappings.some(
         (m) =>
           m.deviceType === activeInput.deviceType &&
           m.inputId === activeInput.inputId &&
           m.gestureType === selectedGesture &&
+          m.modifierHash === currentModifierHash &&
           m.actionSlot === slotId
       );
 
       if (duplicateExists) {
-        console.warn('Duplicate mapping prevented:', {
+        console.warn('[MappingDesigner] Duplicate mapping prevented:', {
           deviceType: activeInput.deviceType,
           inputId: activeInput.inputId,
           gestureType: selectedGesture,
+          modifierHash: currentModifierHash,
           actionSlot: slotId
         });
         return; // Prevent duplicate
@@ -199,23 +242,30 @@ export function MappingDesigner({ profile, onUpdate }: MappingDesignerProps) {
         deviceType: activeInput.deviceType as InputMapping["deviceType"],
         inputId: activeInput.inputId,
         gestureType: selectedGesture,
+        modifierHash: currentModifierHash,
         actionName: actionSlots[slotId].name,
         actionDescription: actionSlots[slotId].description,
         priority: 0,
         actionSlot: slotId,
       };
 
-      // Create new mappings array and deduplicate
+      // Create new mappings array and deduplicate based on composite key including modifierHash
       const newMappings = [...profile.inputMappings, newMapping];
       const seen = new Set<string>();
       const deduplicated = newMappings.filter(m => {
-        const key = `${m.deviceType}:${m.inputId}:${m.gestureType}:${m.actionSlot}`;
+        const key = `${m.deviceType}:${m.inputId}:${m.gestureType}:${m.modifierHash}:${m.actionSlot}`;
         if (seen.has(key)) {
           console.warn('Filtered duplicate mapping:', key);
           return false;
         }
         seen.add(key);
         return true;
+      });
+
+      console.log('[MappingDesigner] Calling onUpdate with new mappings', {
+        oldCount: profile.inputMappings.length,
+        newCount: deduplicated.length,
+        newMapping: newMapping.id
       });
 
       isUpdatingRef.current = true;
@@ -588,6 +638,13 @@ function MappingChip({
           <GripVertical className="h-3 w-3 text-muted-foreground" data-testid={`grip-${mapping.id}`} />
         </div>
         <span className="text-xs font-mono flex-1" data-testid={`text-input-${mapping.id}`}>{mapping.inputId}</span>
+        <Badge 
+          variant="outline" 
+          className="text-xs px-1.5 py-0 font-mono"
+          data-testid={`badge-modifier-${mapping.id}`}
+        >
+          {modifierLabels[mapping.modifierHash] || mapping.modifierHash}
+        </Badge>
         <select
           value={mapping.gestureType}
           onChange={(e) => onGestureChange(mapping.id, e.target.value as GestureType)}

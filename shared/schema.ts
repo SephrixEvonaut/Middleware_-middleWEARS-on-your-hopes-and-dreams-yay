@@ -101,6 +101,7 @@ export const inputMappingSchema = z.object({
   deviceType: z.enum(["keyboard", "azeron", "razer_mmo", "swiftpoint", "fsr_sensor"]),
   inputId: z.string(),
   gestureType: gestureTypeSchema,
+  modifierHash: modifierModeSchema.default("normal"), // Modifier mode when mapping was created
   actionName: z.string(),
   actionDescription: z.string().optional(),
   priority: z.number().default(0),

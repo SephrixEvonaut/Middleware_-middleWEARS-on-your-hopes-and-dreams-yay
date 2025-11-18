@@ -24,6 +24,41 @@ export const SAFE_KEYS = [
 
 export type SafeKey = typeof SAFE_KEYS[number];
 
+// Forbidden keys that include modifiers or special keys
+export const FORBIDDEN_KEYS = [
+  "Alt", "Shift", "Ctrl", "Control", "Windows", "Win", "Cmd", "Command", "Meta",
+  "Tab", "Capslock", "CapsLock", "Escape", "Esc", "Delete", "Del",
+  "PrtScrn", "PrintScreen", "Enter", "Return", "Backspace", "Insert"
+] as const;
+
+/**
+ * Validates that a key is safe for SWTOR keybinds (no modifiers)
+ * Returns true if key is in SAFE_KEYS list, false otherwise
+ */
+export function isSafeKey(key: string): key is SafeKey {
+  return SAFE_KEYS.includes(key as SafeKey);
+}
+
+/**
+ * Validates that a key is NOT a forbidden modifier or special key
+ * Returns error message if forbidden, null if safe
+ */
+export function validateKeyIsSafe(key: string): string | null {
+  const upperKey = key.toUpperCase();
+  
+  for (const forbidden of FORBIDDEN_KEYS) {
+    if (upperKey === forbidden.toUpperCase()) {
+      return `Key "${key}" is forbidden - it's a modifier or special key that violates anti-cheat compliance`;
+    }
+  }
+  
+  if (!isSafeKey(key)) {
+    return `Key "${key}" is not in the safe key list (68 allowed keys)`;
+  }
+  
+  return null; // Key is safe
+}
+
 // SWTOR Action names (common actions - user can customize actionName in mappings)
 export interface SWTORBinding {
   action: string; // e.g., "QuickSlot1", "TargetNextEnemy", custom action names
@@ -47,8 +82,9 @@ export interface GestureKeyMapping {
 }
 
 /**
- * Translates profile mappings to safe keyboard outputs
+ * Translates profile mappings to safe keyboard outputs for a specific modifier mode
  * Maps each gesture to a unique safe key, detecting collisions
+ * CRITICAL: Only processes mappings for the specified modifierMode to ensure proper isolation
  */
 export function translateMappingsToSafeKeys(
   profile: Profile,
@@ -58,9 +94,13 @@ export function translateMappingsToSafeKeys(
   const usedKeys = new Set<SafeKey>();
   let keyIndex = 0;
 
-  // Filter mappings for this modifier mode (future enhancement)
-  // For now, use all mappings
-  const relevantMappings = profile.inputMappings;
+  // Filter mappings to ONLY those matching this modifier mode
+  // This ensures each modifier mode gets independent safe key mappings
+  const relevantMappings = profile.inputMappings.filter(
+    (m) => m.modifierHash === modifierMode
+  );
+
+  console.log(`[SWTOR Export] Processing ${relevantMappings.length} mappings for modifier mode: ${modifierMode}`);
 
   for (const mapping of relevantMappings) {
     // Find next available safe key
@@ -69,7 +109,7 @@ export function translateMappingsToSafeKeys(
     }
 
     if (keyIndex >= SAFE_KEYS.length) {
-      console.warn(`Ran out of safe keys at mapping index ${mappings.length}`);
+      console.warn(`[SWTOR Export] Ran out of safe keys at mapping index ${mappings.length} for mode ${modifierMode}`);
       break;
     }
 
@@ -85,6 +125,7 @@ export function translateMappingsToSafeKeys(
       modifierMode,
     });
 
+    console.log(`[SWTOR Export] ${mapping.inputId} + ${mapping.gestureType} (${modifierMode}) → ${outputKey}`);
     keyIndex++;
   }
 

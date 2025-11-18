@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Profile } from "@shared/schema";
+import type { Profile, ModifierMode } from "@shared/schema";
 import { exportSWTORKeybinds, translateMappingsToSafeKeys } from "@shared/swtorExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +17,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Download, Copy, FileCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SWTORExportProps {
   profile: Profile;
 }
 
+const MODIFIER_MODE_LABELS: Record<ModifierMode, string> = {
+  normal: "Normal",
+  ctrl: "Ctrl",
+  shift: "Shift",
+  alt: "Alt",
+  ctrl_shift: "Ctrl+Shift",
+  ctrl_alt: "Ctrl+Alt",
+  shift_alt: "Shift+Alt",
+};
+
 export function SWTORExport({ profile }: SWTORExportProps) {
   const [characterName, setCharacterName] = useState("");
+  const [selectedMode, setSelectedMode] = useState<ModifierMode>("normal");
   const [xmlPreview, setXmlPreview] = useState("");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { toast } = useToast();
@@ -38,7 +56,7 @@ export function SWTORExport({ profile }: SWTORExportProps) {
       return;
     }
 
-    const xml = exportSWTORKeybinds(profile, characterName.trim());
+    const xml = exportSWTORKeybinds(profile, characterName.trim(), selectedMode);
     setXmlPreview(xml);
     setIsPreviewOpen(true);
   };
@@ -76,9 +94,23 @@ export function SWTORExport({ profile }: SWTORExportProps) {
     });
   };
 
-  const mappingCount = profile.inputMappings.length;
-  const safeKeyMappings = translateMappingsToSafeKeys(profile);
-  const collisionCount = mappingCount - safeKeyMappings.length;
+  // Calculate stats per modifier mode
+  const modifierModes: ModifierMode[] = ["normal", "ctrl", "shift", "alt", "ctrl_shift", "ctrl_alt", "shift_alt"];
+  const mappingsByMode = modifierModes.map((mode) => {
+    const count = profile.inputMappings.filter((m) => m.modifierHash === mode).length;
+    const safeMappings = translateMappingsToSafeKeys(profile, mode);
+    return {
+      mode,
+      count,
+      safeCount: safeMappings.length,
+      label: MODIFIER_MODE_LABELS[mode],
+    };
+  }).filter((stat) => stat.count > 0); // Only show modes with mappings
+
+  const totalMappings = profile.inputMappings.length;
+  const selectedModeMappings = translateMappingsToSafeKeys(profile, selectedMode);
+  const selectedModeCount = profile.inputMappings.filter((m) => m.modifierHash === selectedMode).length;
+  const collisionCount = selectedModeCount - selectedModeMappings.length;
 
   return (
     <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
@@ -89,7 +121,7 @@ export function SWTORExport({ profile }: SWTORExportProps) {
               Character Name
             </Label>
             <Badge variant="secondary" className="text-xs">
-              {mappingCount} mappings
+              {totalMappings} total mappings
             </Badge>
           </div>
           <Input
@@ -104,7 +136,44 @@ export function SWTORExport({ profile }: SWTORExportProps) {
           </p>
         </div>
 
-        {mappingCount === 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="modifier-mode" className="text-sm font-medium">
+            Modifier Mode to Export
+          </Label>
+          <Select value={selectedMode} onValueChange={(value) => setSelectedMode(value as ModifierMode)}>
+            <SelectTrigger id="modifier-mode" data-testid="select-modifier-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {modifierModes.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {MODIFIER_MODE_LABELS[mode]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Select which modifier mode's mappings to export
+          </p>
+        </div>
+
+        {mappingsByMode.length > 0 && (
+          <div className="p-3 bg-muted/50 border rounded-md">
+            <p className="text-xs font-medium mb-2">Mappings by Modifier Mode:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {mappingsByMode.map((stat) => (
+                <div key={stat.mode} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{stat.label}:</span>
+                  <Badge variant="outline" className="text-xs">
+                    {stat.safeCount}/{stat.count}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {totalMappings === 0 && (
           <div className="p-3 bg-muted/50 border rounded-md">
             <p className="text-xs text-muted-foreground font-medium">
               No input mappings configured
@@ -121,7 +190,7 @@ export function SWTORExport({ profile }: SWTORExportProps) {
               Warning: {collisionCount} mapping(s) exceeded safe key limit (68 keys)
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Only the first {safeKeyMappings.length} mappings will be exported.
+              Only the first {selectedModeMappings.length} mappings will be exported for {MODIFIER_MODE_LABELS[selectedMode]} mode.
             </p>
           </div>
         )}
@@ -167,8 +236,8 @@ export function SWTORExport({ profile }: SWTORExportProps) {
 
           <div className="flex items-center justify-between p-3 bg-primary/5 rounded-md border border-primary/20">
             <div className="text-xs">
-              <p className="font-medium">{safeKeyMappings.length} keybinds generated</p>
-              <p className="text-muted-foreground">Using {new Set(safeKeyMappings.map(m => m.outputKey)).size} unique safe keys</p>
+              <p className="font-medium">{selectedModeMappings.length} keybinds generated for {MODIFIER_MODE_LABELS[selectedMode]} mode</p>
+              <p className="text-muted-foreground">Using {new Set(selectedModeMappings.map(m => m.outputKey)).size} unique safe keys (no modifiers)</p>
             </div>
             <Badge variant="default">{profile.name}</Badge>
           </div>

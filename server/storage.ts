@@ -64,6 +64,7 @@ export class MemStorage implements IStorage {
         debounceDelay: 10,
         chargeMinHold: 300,
         chargeMaxHold: 2000,
+        outputKeyPadding: 25,
       },
       inputMappings: [],
       modifierDefaults: {
