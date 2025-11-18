@@ -126,7 +126,7 @@ export function GestureSimulator({ settings }: GestureSimulatorProps) {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [debugMode]);
+  }, [debugMode, modifierState]);
   
   // Right-click emergency cancel
   useEffect(() => {

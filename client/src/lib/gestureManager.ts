@@ -131,11 +131,8 @@ export class GestureManager {
     const state = this.getOrCreateState(keyCode, modifierHash);
     const now = Date.now();
     
-    // Clear any pending wait timer (new press interrupts waiting)
-    if (state.waitTimer) {
-      clearTimeout(state.waitTimer);
-      state.waitTimer = null;
-    }
+    // Clear ALL existing timers (new press interrupts everything)
+    this.clearTimers(state);
     
     // Record press event
     state.pressHistory.push({
@@ -149,6 +146,8 @@ export class GestureManager {
     
     // Update wait window dynamically: 80ms + (50ms per tap)
     state.waitWindowMs = BASE_WAIT_MS + (INCREMENTAL_WAIT_MS * (state.pressCount - 1));
+    
+    console.log(`[GestureManager] ${keyCode} press #${state.pressCount} (${modifierHash}), wait window: ${state.waitWindowMs}ms`);
     
     // Start long press detection timer
     state.longPressTimer = setTimeout(() => {
@@ -213,10 +212,15 @@ export class GestureManager {
     const compositeKey = this.getCompositeKey(keyCode, modifierHash);
     const state = this.keyStates.get(compositeKey);
     
-    if (!state || !state.pressStartTime) return;
+    if (!state || !state.pressStartTime) {
+      console.log(`[GestureManager] endPress ignored: ${keyCode} (${modifierHash}) - no active press`);
+      return;
+    }
     
     const now = Date.now();
     const holdDuration = now - state.pressStartTime;
+    
+    console.log(`[GestureManager] ${keyCode} release after ${holdDuration}ms, pressCount=${state.pressCount}`);
     
     // Clear long press timer
     if (state.longPressTimer) {
@@ -239,6 +243,8 @@ export class GestureManager {
       // Long press detected - emit immediately
       const gesture = holdDuration >= SUPER_LONG_PRESS_MIN ? "super_long_press" : "long_press";
       
+      console.log(`[GestureManager] Long press detected: ${gesture} (hold=${holdDuration}ms)`);
+      
       // Track attempt
       if (this.onGestureAttempt) {
         this.onGestureAttempt(state.keyCode, gesture, state.modifierHash);
@@ -251,6 +257,7 @@ export class GestureManager {
     }
     
     // Short tap - start wait window
+    console.log(`[GestureManager] Tap detected, starting ${state.waitWindowMs}ms wait window`);
     state.phase = "executing";
     state.waitTimer = setTimeout(() => {
       this.finalizeGesture(state);
@@ -264,6 +271,8 @@ export class GestureManager {
    */
   private finalizeGesture(state: KeyTimelineState): void {
     const gesture = this.determineGesture(state);
+    
+    console.log(`[GestureManager] Finalizing: ${state.keyCode} → ${gesture} (pressCount=${state.pressCount})`);
     
     // Track attempt
     if (this.onGestureAttempt) {
