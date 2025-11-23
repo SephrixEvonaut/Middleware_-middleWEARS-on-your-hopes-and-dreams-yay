@@ -1,0 +1,21 @@
+{
+  "name": "macro-sequencer",
+  "version": "1.0.0",
+  "description": "Per-key gesture detection and macro sequencing for SWTOR ability combos",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx macro-server/index.ts",
+    "build": "tsc",
+    "start": "node dist/macro-server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
