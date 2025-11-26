@@ -1,0 +1,114 @@
+{
+  "name": "SWTOR Combat Macros",
+  "description": "Example macro profile for SWTOR ability combos",
+  "gestureSettings": {
+    "multiPressWindow": 350,
+    "debounceDelay": 10,
+    "longPressMin": 80,
+    "longPressMax": 140,
+    "superLongMin": 300,
+    "superLongMax": 2000,
+    "cancelThreshold": 3000
+  },
+  "macros": [
+    {
+      "name": "Crushing Blow Combo",
+      "trigger": {
+        "key": "1",
+        "gesture": "double"
+      },
+      "sequence": [
+        { "key": "f1", "minDelay": 25, "maxDelay": 35 },
+        { "key": "a", "minDelay": 25, "maxDelay": 30 },
+        { "key": "a", "minDelay": 25, "maxDelay": 30 },
+        { "key": "b", "minDelay": 30, "maxDelay": 40 },
+        { "key": "a", "minDelay": 25, "maxDelay": 29 },
+        { "key": "c", "minDelay": 35, "maxDelay": 45 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Force Leap Engage",
+      "trigger": {
+        "key": "2",
+        "gesture": "triple"
+      },
+      "sequence": [
+        { "key": "d", "minDelay": 26, "maxDelay": 32 },
+        { "key": "d", "minDelay": 26, "maxDelay": 32 },
+        { "key": "d", "minDelay": 26, "maxDelay": 32 },
+        { "key": "f1", "minDelay": 37, "maxDelay": 50 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Force Choke CC",
+      "trigger": {
+        "key": "3",
+        "gesture": "long"
+      },
+      "sequence": [
+        { "key": "e", "minDelay": 30, "maxDelay": 40 },
+        { "key": "e", "minDelay": 30, "maxDelay": 40 },
+        { "key": "f", "minDelay": 25, "maxDelay": 35 },
+        { "key": "g", "minDelay": 28, "maxDelay": 38 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Defensive Rotation",
+      "trigger": {
+        "key": "4",
+        "gesture": "double_long"
+      },
+      "sequence": [
+        { "key": "h", "minDelay": 25, "maxDelay": 30 },
+        { "key": "i", "minDelay": 25, "maxDelay": 30 },
+        { "key": "h", "minDelay": 25, "maxDelay": 30 },
+        { "key": "j", "minDelay": 30, "maxDelay": 40 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Burst DPS",
+      "trigger": {
+        "key": "5",
+        "gesture": "triple_long"
+      },
+      "sequence": [
+        { "key": "k", "minDelay": 25, "maxDelay": 29 },
+        { "key": "k", "minDelay": 25, "maxDelay": 29 },
+        { "key": "k", "minDelay": 25, "maxDelay": 29 },
+        { "key": "l", "minDelay": 30, "maxDelay": 38 },
+        { "key": "k", "minDelay": 25, "maxDelay": 29 },
+        { "key": "k", "minDelay": 25, "maxDelay": 29 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Super Long Alt Sequence",
+      "trigger": {
+        "key": "6",
+        "gesture": "super_long"
+      },
+      "sequence": [
+        { "key": "m", "minDelay": 40, "maxDelay": 50 },
+        { "key": "n", "minDelay": 40, "maxDelay": 50 },
+        { "key": "o", "minDelay": 40, "maxDelay": 50 },
+        { "key": "p", "minDelay": 40, "maxDelay": 50 }
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Cancel - Stop All",
+      "trigger": {
+        "key": "6",
+        "gesture": "cancel"
+      },
+      "sequence": [
+        { "key": "escape", "minDelay": 25, "maxDelay": 35 }
+      ],
+      "enabled": true
+    }
+  ]
+}

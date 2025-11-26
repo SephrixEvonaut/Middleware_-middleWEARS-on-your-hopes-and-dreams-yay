@@ -1,0 +1,288 @@
+// ============================================================================
+// SEQUENCE EXECUTOR - Sends keypresses with human-like timing
+// ============================================================================
+
+import robot from 'robotjs';
+import { SequenceStep, MacroBinding, SEQUENCE_CONSTRAINTS } from './types.js';
+
+export interface ExecutionEvent {
+  type: 'started' | 'step' | 'completed' | 'error' | 'cancelled';
+  bindingName: string;
+  step?: SequenceStep;
+  stepIndex?: number;
+  delay?: number;
+  error?: string;
+  timestamp: number;
+}
+
+export type ExecutionCallback = (event: ExecutionEvent) => void;
+
+export class SequenceExecutor {
+  private isExecuting: Map<string, boolean> = new Map();
+  private callback: ExecutionCallback;
+
+  constructor(callback?: ExecutionCallback) {
+    this.callback = callback || (() => {});
+    
+    // Configure robotjs for minimal internal delay
+    robot.setKeyboardDelay(1);
+  }
+
+  /**
+   * Validate a sequence step meets timing constraints
+   */
+  private validateStep(step: SequenceStep, stepIndex: number): string | null {
+    // Check minimum delay
+    if (step.minDelay < SEQUENCE_CONSTRAINTS.MIN_DELAY) {
+      return `Step ${stepIndex} ("${step.key}"): minDelay must be >= ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms (got ${step.minDelay}ms)`;
+    }
+
+    // Check variance requirement
+    const variance = step.maxDelay - step.minDelay;
+    if (variance < SEQUENCE_CONSTRAINTS.MIN_VARIANCE) {
+      return `Step ${stepIndex} ("${step.key}"): variance (max - min) must be >= ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms (got ${variance}ms)`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Validate entire sequence meets constraints
+   */
+  private validateSequence(sequence: SequenceStep[]): string | null {
+    // Validate each step
+    for (let i = 0; i < sequence.length; i++) {
+      const error = this.validateStep(sequence[i], i);
+      if (error) return error;
+    }
+
+    // Count unique keys and repetitions
+    const keyCount: Map<string, number> = new Map();
+    for (const step of sequence) {
+      const count = keyCount.get(step.key) || 0;
+      keyCount.set(step.key, count + 1);
+    }
+
+    // Check max unique keys
+    if (keyCount.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
+      return `Sequence has ${keyCount.size} unique keys, maximum is ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`;
+    }
+
+    // Check max repeats per key
+    for (const [key, count] of keyCount) {
+      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        return `Key "${key}" appears ${count} times, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get randomized delay between min and max (inclusive)
+   */
+  private getRandomDelay(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Send a single keypress
+   */
+  private pressKey(key: string): void {
+    // Handle special keys
+    const keyMap: Record<string, string> = {
+      'f1': 'f1', 'f2': 'f2', 'f3': 'f3', 'f4': 'f4',
+      'f5': 'f5', 'f6': 'f6', 'f7': 'f7', 'f8': 'f8',
+      'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12',
+      'space': 'space', 'enter': 'enter', 'tab': 'tab',
+      'escape': 'escape', 'backspace': 'backspace',
+      'up': 'up', 'down': 'down', 'left': 'left', 'right': 'right',
+    };
+
+    const mappedKey = keyMap[key.toLowerCase()] || key.toLowerCase();
+    robot.keyTap(mappedKey);
+  }
+
+  /**
+   * Check if a binding is currently executing
+   */
+  isBindingExecuting(bindingName: string): boolean {
+    return this.isExecuting.get(bindingName) || false;
+  }
+
+  /**
+   * Cancel execution for a specific binding
+   */
+  cancel(bindingName: string): void {
+    if (this.isExecuting.get(bindingName)) {
+      this.isExecuting.set(bindingName, false);
+      this.callback({
+        type: 'cancelled',
+        bindingName,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Cancel all executions
+   */
+  cancelAll(): void {
+    for (const [name] of this.isExecuting) {
+      this.cancel(name);
+    }
+  }
+
+  /**
+   * Execute a macro binding's sequence
+   */
+  async execute(binding: MacroBinding): Promise<boolean> {
+    const { name, sequence } = binding;
+
+    // Check if already executing
+    if (this.isExecuting.get(name)) {
+      console.log(`⚠️  "${name}" already executing, skipping...`);
+      return false;
+    }
+
+    // Validate sequence
+    const validationError = this.validateSequence(sequence);
+    if (validationError) {
+      this.callback({
+        type: 'error',
+        bindingName: name,
+        error: validationError,
+        timestamp: Date.now(),
+      });
+      console.error(`❌ Validation failed: ${validationError}`);
+      return false;
+    }
+
+    // Mark as executing
+    this.isExecuting.set(name, true);
+
+    this.callback({
+      type: 'started',
+      bindingName: name,
+      timestamp: Date.now(),
+    });
+
+    console.log(`\n🎮 Executing: "${name}" (${sequence.length} steps)`);
+
+    try {
+      for (let i = 0; i < sequence.length; i++) {
+        // Check if cancelled
+        if (!this.isExecuting.get(name)) {
+          console.log(`⏹️  "${name}" cancelled`);
+          return false;
+        }
+
+        const step = sequence[i];
+
+        // Press the key
+        this.pressKey(step.key);
+
+        this.callback({
+          type: 'step',
+          bindingName: name,
+          step,
+          stepIndex: i,
+          timestamp: Date.now(),
+        });
+
+        console.log(`  ✓ [${i + 1}/${sequence.length}] Pressed "${step.key}"`);
+
+        // Wait random delay (unless it's the last step)
+        if (i < sequence.length - 1) {
+          const delay = this.getRandomDelay(step.minDelay, step.maxDelay);
+
+          this.callback({
+            type: 'step',
+            bindingName: name,
+            step,
+            stepIndex: i,
+            delay,
+            timestamp: Date.now(),
+          });
+
+          console.log(`     ⏱️  Waiting ${delay}ms...`);
+          await this.sleep(delay);
+        }
+      }
+
+      this.callback({
+        type: 'completed',
+        bindingName: name,
+        timestamp: Date.now(),
+      });
+
+      console.log(`✅ "${name}" complete\n`);
+      return true;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      this.callback({
+        type: 'error',
+        bindingName: name,
+        error: errorMsg,
+        timestamp: Date.now(),
+      });
+
+      console.error(`❌ "${name}" failed: ${errorMsg}`);
+      return false;
+
+    } finally {
+      this.isExecuting.set(name, false);
+    }
+  }
+
+  /**
+   * Test execution without actually sending keys (dry run)
+   */
+  async dryRun(binding: MacroBinding): Promise<void> {
+    const { name, sequence } = binding;
+
+    // Validate
+    const validationError = this.validateSequence(sequence);
+    if (validationError) {
+      console.error(`❌ Validation failed: ${validationError}`);
+      return;
+    }
+
+    console.log(`\n🧪 DRY RUN: "${name}" (${sequence.length} steps)`);
+
+    // Count keys
+    const keyCount: Map<string, number> = new Map();
+    for (const step of sequence) {
+      keyCount.set(step.key, (keyCount.get(step.key) || 0) + 1);
+    }
+
+    console.log(`   Unique keys: ${keyCount.size}/${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`);
+    for (const [key, count] of keyCount) {
+      console.log(`   - "${key}": ${count}x`);
+    }
+
+    let totalMinTime = 0;
+    let totalMaxTime = 0;
+
+    for (let i = 0; i < sequence.length; i++) {
+      const step = sequence[i];
+      console.log(`   [${i + 1}] "${step.key}" → wait ${step.minDelay}-${step.maxDelay}ms`);
+      
+      if (i < sequence.length - 1) {
+        totalMinTime += step.minDelay;
+        totalMaxTime += step.maxDelay;
+      }
+    }
+
+    console.log(`   ⏱️  Total time: ${totalMinTime}-${totalMaxTime}ms\n`);
+  }
+}
