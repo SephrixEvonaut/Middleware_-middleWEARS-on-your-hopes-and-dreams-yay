@@ -52,15 +52,25 @@ export class SequenceExecutor {
   private validateSequence(sequence: SequenceStep[]): string | null {
     // Validate each step
     for (let i = 0; i < sequence.length; i++) {
-      const error = this.validateStep(sequence[i], i);
+      const step = sequence[i];
+      const error = this.validateStep(step, i);
       if (error) return error;
+      
+      // Check echoHits constraint
+      const echoHits = step.echoHits || 1;
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        return `Step ${i} ("${step.key}"): echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`;
+      }
     }
 
-    // Count unique keys and repetitions
+    // Count unique keys and TOTAL repetitions (including echoHits)
+    // Normalize to lowercase for consistent counting
     const keyCount: Map<string, number> = new Map();
     for (const step of sequence) {
-      const count = keyCount.get(step.key) || 0;
-      keyCount.set(step.key, count + 1);
+      const normalizedKey = step.key.toLowerCase();
+      const echoHits = step.echoHits || 1;
+      const count = keyCount.get(normalizedKey) || 0;
+      keyCount.set(normalizedKey, count + echoHits);
     }
 
     // Check max unique keys
@@ -68,10 +78,10 @@ export class SequenceExecutor {
       return `Sequence has ${keyCount.size} unique keys, maximum is ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`;
     }
 
-    // Check max repeats per key
+    // Check max total repeats per key (across all steps)
     for (const [key, count] of keyCount) {
       if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        return `Key "${key}" appears ${count} times, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`;
+        return `Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`;
       }
     }
 
@@ -185,35 +195,48 @@ export class SequenceExecutor {
         }
 
         const step = sequence[i];
+        const echoHits = step.echoHits || 1;
 
-        // Press the key
-        this.pressKey(step.key);
+        // Execute each echo hit for this step
+        for (let hit = 0; hit < echoHits; hit++) {
+          // Check if cancelled between hits
+          if (!this.isExecuting.get(name)) {
+            console.log(`⏹️  "${name}" cancelled`);
+            return false;
+          }
 
-        this.callback({
-          type: 'step',
-          bindingName: name,
-          step,
-          stepIndex: i,
-          timestamp: Date.now(),
-        });
-
-        console.log(`  ✓ [${i + 1}/${sequence.length}] Pressed "${step.key}"`);
-
-        // Wait random delay (unless it's the last step)
-        if (i < sequence.length - 1) {
-          const delay = this.getRandomDelay(step.minDelay, step.maxDelay);
+          // Press the key
+          this.pressKey(step.key);
 
           this.callback({
             type: 'step',
             bindingName: name,
             step,
             stepIndex: i,
-            delay,
             timestamp: Date.now(),
           });
 
-          console.log(`     ⏱️  Waiting ${delay}ms...`);
-          await this.sleep(delay);
+          console.log(`  ✓ [${i + 1}/${sequence.length}] Pressed "${step.key}" (hit ${hit + 1}/${echoHits})`);
+
+          // Delay between hits and steps (except after last hit of last step)
+          const isLastHit = hit === echoHits - 1;
+          const isLastStep = i === sequence.length - 1;
+
+          if (!isLastStep || !isLastHit) {
+            const delay = this.getRandomDelay(step.minDelay, step.maxDelay);
+
+            this.callback({
+              type: 'step',
+              bindingName: name,
+              step,
+              stepIndex: i,
+              delay,
+              timestamp: Date.now(),
+            });
+
+            console.log(`     ⏱️  Waiting ${delay}ms...`);
+            await this.sleep(delay);
+          }
         }
       }
 
@@ -259,13 +282,17 @@ export class SequenceExecutor {
 
     console.log(`\n🧪 DRY RUN: "${name}" (${sequence.length} steps)`);
 
-    // Count keys
+    // Count keys including echoHits
     const keyCount: Map<string, number> = new Map();
+    let totalPresses = 0;
     for (const step of sequence) {
-      keyCount.set(step.key, (keyCount.get(step.key) || 0) + 1);
+      const echoHits = step.echoHits || 1;
+      keyCount.set(step.key, (keyCount.get(step.key) || 0) + echoHits);
+      totalPresses += echoHits;
     }
 
     console.log(`   Unique keys: ${keyCount.size}/${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`);
+    console.log(`   Total key presses: ${totalPresses}`);
     for (const [key, count] of keyCount) {
       console.log(`   - "${key}": ${count}x`);
     }
@@ -275,12 +302,16 @@ export class SequenceExecutor {
 
     for (let i = 0; i < sequence.length; i++) {
       const step = sequence[i];
-      console.log(`   [${i + 1}] "${step.key}" → wait ${step.minDelay}-${step.maxDelay}ms`);
+      const echoHits = step.echoHits || 1;
+      console.log(`   [${i + 1}] "${step.key}" x${echoHits} → wait ${step.minDelay}-${step.maxDelay}ms`);
       
-      if (i < sequence.length - 1) {
-        totalMinTime += step.minDelay;
-        totalMaxTime += step.maxDelay;
-      }
+      // Each keypress (except last) has a delay
+      const pressesInStep = echoHits;
+      const isLastStep = i === sequence.length - 1;
+      const delayCount = isLastStep ? pressesInStep - 1 : pressesInStep;
+      
+      totalMinTime += step.minDelay * delayCount;
+      totalMaxTime += step.maxDelay * delayCount;
     }
 
     console.log(`   ⏱️  Total time: ${totalMinTime}-${totalMaxTime}ms\n`);

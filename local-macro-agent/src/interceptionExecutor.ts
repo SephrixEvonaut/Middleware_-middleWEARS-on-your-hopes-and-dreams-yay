@@ -23,48 +23,66 @@ import { SequenceStep, MacroBinding, SEQUENCE_CONSTRAINTS } from './types.js';
 
 // Interception key codes (scan codes)
 // These are hardware scan codes, not virtual key codes
-const SCAN_CODES: Record<string, number> = {
+// Extended keys (marked with isExtended: true) require the E0 flag
+interface ScanCodeEntry {
+  code: number;
+  isExtended?: boolean;
+}
+
+const SCAN_CODES: Record<string, ScanCodeEntry> = {
   // Number row
-  '1': 0x02, '2': 0x03, '3': 0x04, '4': 0x05, '5': 0x06,
-  '6': 0x07, '7': 0x08, '8': 0x09, '9': 0x0A, '0': 0x0B,
+  '1': { code: 0x02 }, '2': { code: 0x03 }, '3': { code: 0x04 }, '4': { code: 0x05 }, '5': { code: 0x06 },
+  '6': { code: 0x07 }, '7': { code: 0x08 }, '8': { code: 0x09 }, '9': { code: 0x0A }, '0': { code: 0x0B },
   
   // QWERTY row
-  'q': 0x10, 'w': 0x11, 'e': 0x12, 'r': 0x13, 't': 0x14,
-  'y': 0x15, 'u': 0x16, 'i': 0x17, 'o': 0x18, 'p': 0x19,
+  'q': { code: 0x10 }, 'w': { code: 0x11 }, 'e': { code: 0x12 }, 'r': { code: 0x13 }, 't': { code: 0x14 },
+  'y': { code: 0x15 }, 'u': { code: 0x16 }, 'i': { code: 0x17 }, 'o': { code: 0x18 }, 'p': { code: 0x19 },
   
   // ASDF row
-  'a': 0x1E, 's': 0x1F, 'd': 0x20, 'f': 0x21, 'g': 0x22,
-  'h': 0x23, 'j': 0x24, 'k': 0x25, 'l': 0x26,
+  'a': { code: 0x1E }, 's': { code: 0x1F }, 'd': { code: 0x20 }, 'f': { code: 0x21 }, 'g': { code: 0x22 },
+  'h': { code: 0x23 }, 'j': { code: 0x24 }, 'k': { code: 0x25 }, 'l': { code: 0x26 },
   
   // ZXCV row
-  'z': 0x2C, 'x': 0x2D, 'c': 0x2E, 'v': 0x2F, 'b': 0x30,
-  'n': 0x31, 'm': 0x32,
+  'z': { code: 0x2C }, 'x': { code: 0x2D }, 'c': { code: 0x2E }, 'v': { code: 0x2F }, 'b': { code: 0x30 },
+  'n': { code: 0x31 }, 'm': { code: 0x32 },
   
   // Function keys
-  'f1': 0x3B, 'f2': 0x3C, 'f3': 0x3D, 'f4': 0x3E,
-  'f5': 0x3F, 'f6': 0x40, 'f7': 0x41, 'f8': 0x42,
-  'f9': 0x43, 'f10': 0x44, 'f11': 0x57, 'f12': 0x58,
+  'f1': { code: 0x3B }, 'f2': { code: 0x3C }, 'f3': { code: 0x3D }, 'f4': { code: 0x3E },
+  'f5': { code: 0x3F }, 'f6': { code: 0x40 }, 'f7': { code: 0x41 }, 'f8': { code: 0x42 },
+  'f9': { code: 0x43 }, 'f10': { code: 0x44 }, 'f11': { code: 0x57 }, 'f12': { code: 0x58 },
   
   // Special keys
-  'space': 0x39, 'enter': 0x1C, 'escape': 0x01,
-  'tab': 0x0F, 'backspace': 0x0E,
+  'space': { code: 0x39 }, 'enter': { code: 0x1C }, 'escape': { code: 0x01 },
+  'tab': { code: 0x0F }, 'backspace': { code: 0x0E },
   
-  // Numpad
-  'num0': 0x52, 'num1': 0x4F, 'num2': 0x50, 'num3': 0x51,
-  'num4': 0x4B, 'num5': 0x4C, 'num6': 0x4D,
-  'num7': 0x47, 'num8': 0x48, 'num9': 0x49,
-  'numplus': 0x4E, 'numminus': 0x4A,
-  'nummultiply': 0x37, 'numdivide': 0x35,
+  // Numpad (NOT extended - these are the numpad keys)
+  'num0': { code: 0x52 }, 'num1': { code: 0x4F }, 'num2': { code: 0x50 }, 'num3': { code: 0x51 },
+  'num4': { code: 0x4B }, 'num5': { code: 0x4C }, 'num6': { code: 0x4D },
+  'num7': { code: 0x47 }, 'num8': { code: 0x48 }, 'num9': { code: 0x49 },
+  'numplus': { code: 0x4E }, 'numminus': { code: 0x4A },
+  'nummultiply': { code: 0x37 }, 'numdivide': { code: 0x35, isExtended: true },
+  'numenter': { code: 0x1C, isExtended: true },
   
-  // Arrow keys (extended)
-  'up': 0x48, 'down': 0x50, 'left': 0x4B, 'right': 0x4D,
+  // Arrow keys (EXTENDED - require E0 flag to distinguish from numpad)
+  'up': { code: 0x48, isExtended: true },
+  'down': { code: 0x50, isExtended: true },
+  'left': { code: 0x4B, isExtended: true },
+  'right': { code: 0x4D, isExtended: true },
+  
+  // Navigation keys (EXTENDED)
+  'insert': { code: 0x52, isExtended: true },
+  'delete': { code: 0x53, isExtended: true },
+  'home': { code: 0x47, isExtended: true },
+  'end': { code: 0x4F, isExtended: true },
+  'pageup': { code: 0x49, isExtended: true },
+  'pagedown': { code: 0x51, isExtended: true },
   
   // Other
-  'minus': 0x0C, 'equals': 0x0D,
-  'leftbracket': 0x1A, 'rightbracket': 0x1B,
-  'semicolon': 0x27, 'quote': 0x28,
-  'comma': 0x33, 'period': 0x34, 'slash': 0x35,
-  'backslash': 0x2B, 'grave': 0x29,
+  'minus': { code: 0x0C }, 'equals': { code: 0x0D },
+  'leftbracket': { code: 0x1A }, 'rightbracket': { code: 0x1B },
+  'semicolon': { code: 0x27 }, 'quote': { code: 0x28 },
+  'comma': { code: 0x33 }, 'period': { code: 0x34 }, 'slash': { code: 0x35 },
+  'backslash': { code: 0x2B }, 'grave': { code: 0x29 },
 };
 
 // Interception stroke structure
@@ -173,26 +191,26 @@ export class InterceptionExecutor {
   }
 
   /**
-   * Convert key name to scan code
+   * Get scan code entry for a key (includes extended flag)
    */
-  private getScanCode(key: string): number | null {
+  private getScanCodeEntry(key: string): ScanCodeEntry | null {
     const normalizedKey = key.toLowerCase();
     return SCAN_CODES[normalizedKey] ?? null;
   }
 
   /**
    * Create a keystroke buffer for Interception
+   * The struct is 8 bytes total:
+   *   unsigned short code (2 bytes)
+   *   unsigned short state (2 bytes)
+   *   unsigned int information (4 bytes)
    */
-  private createStrokeBuffer(code: number, state: number): Buffer {
-    // Interception keystroke structure is 10 bytes
-    // struct InterceptionKeyStroke {
-    //   unsigned short code;
-    //   unsigned short state;
-    //   unsigned int information;
-    // };
-    const buffer = Buffer.alloc(10);
+  private createStrokeBuffer(code: number, state: number, isExtended: boolean = false): Buffer {
+    const buffer = Buffer.alloc(8);
     buffer.writeUInt16LE(code, 0);      // scan code
-    buffer.writeUInt16LE(state, 2);     // state (0=down, 1=up)
+    // State: 0=down, 1=up, 2=E0 (extended), 3=E0+up
+    const fullState = isExtended ? (state | KEY_E0) : state;
+    buffer.writeUInt16LE(fullState, 2);
     buffer.writeUInt32LE(0, 4);         // information (unused)
     return buffer;
   }
@@ -206,14 +224,16 @@ export class InterceptionExecutor {
       return false;
     }
 
-    const scanCode = this.getScanCode(key);
-    if (scanCode === null) {
+    const entry = this.getScanCodeEntry(key);
+    if (!entry) {
       console.error(`[InterceptionExecutor] Unknown key: ${key}`);
       return false;
     }
 
+    const isExtended = entry.isExtended ?? false;
+
     // Key down
-    const downStroke = this.createStrokeBuffer(scanCode, KEY_DOWN);
+    const downStroke = this.createStrokeBuffer(entry.code, KEY_DOWN, isExtended);
     this.ffi.interception_send(this.context, this.keyboardDevice, downStroke, 1);
 
     // Small delay between down and up (5-15ms, human-like)
@@ -224,7 +244,7 @@ export class InterceptionExecutor {
     }
 
     // Key up
-    const upStroke = this.createStrokeBuffer(scanCode, KEY_UP);
+    const upStroke = this.createStrokeBuffer(entry.code, KEY_UP, isExtended);
     this.ffi.interception_send(this.context, this.keyboardDevice, upStroke, 1);
 
     return true;
@@ -266,6 +286,9 @@ export class InterceptionExecutor {
       errors.push(`Too many unique keys: ${uniqueKeys.size} (max ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS})`);
     }
 
+    // Count total key presses per key (including echoHits)
+    const keyPressCount: Map<string, number> = new Map();
+
     // Check each step
     for (const step of sequence) {
       // Min delay check
@@ -279,15 +302,27 @@ export class InterceptionExecutor {
         errors.push(`Step ${step.key}: variance ${variance}ms < minimum ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms`);
       }
 
-      // Echo hits check
+      // Echo hits check (per-step)
       const echoHits = step.echoHits || 1;
-      if (echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Step ${step.key}: echoHits ${echoHits} > maximum ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
       }
 
+      // Accumulate total presses for this key
+      const normalizedKey = step.key.toLowerCase();
+      const current = keyPressCount.get(normalizedKey) || 0;
+      keyPressCount.set(normalizedKey, current + echoHits);
+
       // Key mapping check
-      if (!this.getScanCode(step.key)) {
+      if (!this.getScanCodeEntry(step.key)) {
         errors.push(`Step ${step.key}: unknown key (no scan code mapping)`);
+      }
+    }
+
+    // Check max total repeats per key (across all steps)
+    for (const [key, count] of keyPressCount) {
+      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        errors.push(`Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
       }
     }
 
@@ -382,15 +417,37 @@ export class MockInterceptionExecutor {
     const uniqueKeys = new Set(sequence.map(s => s.key.toLowerCase()));
     
     if (uniqueKeys.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
-      errors.push(`Too many unique keys: ${uniqueKeys.size}`);
+      errors.push(`Too many unique keys: ${uniqueKeys.size} (max ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS})`);
     }
+
+    // Count total key presses per key (including echoHits)
+    const keyPressCount: Map<string, number> = new Map();
 
     for (const step of sequence) {
       if (step.minDelay < SEQUENCE_CONSTRAINTS.MIN_DELAY) {
-        errors.push(`Step ${step.key}: minDelay too low`);
+        errors.push(`Step ${step.key}: minDelay ${step.minDelay}ms < minimum ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms`);
       }
-      if (step.maxDelay - step.minDelay < SEQUENCE_CONSTRAINTS.MIN_VARIANCE) {
-        errors.push(`Step ${step.key}: variance too low`);
+      const variance = step.maxDelay - step.minDelay;
+      if (variance < SEQUENCE_CONSTRAINTS.MIN_VARIANCE) {
+        errors.push(`Step ${step.key}: variance ${variance}ms < minimum ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms`);
+      }
+      
+      // Echo hits check (per-step)
+      const echoHits = step.echoHits || 1;
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
+      }
+
+      // Accumulate total presses for this key
+      const normalizedKey = step.key.toLowerCase();
+      const current = keyPressCount.get(normalizedKey) || 0;
+      keyPressCount.set(normalizedKey, current + echoHits);
+    }
+
+    // Check max total repeats per key (across all steps)
+    for (const [key, count] of keyPressCount) {
+      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+        errors.push(`Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
       }
     }
 
@@ -407,10 +464,13 @@ export class MockInterceptionExecutor {
     }
 
     console.log(`[MockInterception] Would execute ${sequence.length} steps:`);
+    let totalPresses = 0;
     for (const step of sequence) {
       const echoHits = step.echoHits || 1;
+      totalPresses += echoHits;
       console.log(`  - ${step.key} x${echoHits} (${step.minDelay}-${step.maxDelay}ms delay)`);
     }
+    console.log(`[MockInterception] Total: ${totalPresses} key presses`);
     return true;
   }
 }
