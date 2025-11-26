@@ -32,6 +32,7 @@ export interface SequenceStep {
   key: string;           // The key to press (e.g., "a", "b", "f1")
   minDelay: number;      // Minimum ms before next press (>= 25ms)
   maxDelay: number;      // Maximum ms before next press (variance >= 4ms)
+  echoHits?: number;     // Number of times to repeat this key (1-6, default 1)
 }
 
 // A macro binding: gesture triggers a sequence

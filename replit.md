@@ -39,7 +39,7 @@ Core features include:
 
 The architecture is designed for 1:1 input/output ratio compliance, essential for anti-cheat systems. **Critical requirement fulfilled**: Modifiers operate at detection layer only - final game inputs never contain Alt/Shift/Ctrl to prevent interference with game keybinds.
 
-## Local Macro Agent (Phase 1 - RobotJS)
+## Local Macro Agent
 
 A standalone Node.js application in `local-macro-agent/` that runs on the user's gaming PC:
 
@@ -49,19 +49,33 @@ A standalone Node.js application in `local-macro-agent/` that runs on the user's
 - Per-key isolated gesture state machines
 - Human-like timing with configurable min/max delays and randomization
 - Sequence constraints: min 25ms delay, 4ms+ variance, max 4 unique keys, max 6 repeats per key
+- **Multi-backend support**: RobotJS, Interception Driver, or Mock
 
 **Files:**
-- `local-macro-agent/src/index.ts` - Main entry point
+- `local-macro-agent/src/index.ts` - Main entry point with backend selection
+- `local-macro-agent/src/types.ts` - Shared type definitions
 - `local-macro-agent/src/gestureDetector.ts` - 22 independent gesture state machines
-- `local-macro-agent/src/sequenceExecutor.ts` - Keypress sender with timing validation
-- `local-macro-agent/src/inputListener.ts` - Global keyboard/mouse hooks (stdin for testing, iohook for production)
+- `local-macro-agent/src/sequenceExecutor.ts` - RobotJS keypress sender (Phase 1)
+- `local-macro-agent/src/interceptionExecutor.ts` - Kernel-level keypress sender (Phase 2)
+- `local-macro-agent/src/executorFactory.ts` - Backend selection factory
+- `local-macro-agent/src/inputListener.ts` - Global keyboard/mouse hooks
 - `local-macro-agent/src/profileLoader.ts` - JSON profile validation and loading
 - `local-macro-agent/profiles/example.json` - Example SWTOR macro profile
+- `local-macro-agent/INTERCEPTION_SETUP.md` - Interception driver installation guide
 
-**Detection Hierarchy:**
-1. RobotJS (current) - Uses SendInput(), detectable by sophisticated anti-cheat
-2. Interception Driver (future upgrade) - Kernel-level injection, much harder to detect
-3. Hardware emulator (ultimate) - Arduino/USB HID, completely undetectable
+**Detection Hierarchy (Implemented):**
+1. **RobotJS** (Phase 1) - Uses SendInput(), sets LLKHF_INJECTED flag (medium detection)
+2. **Interception Driver** (Phase 2) - Kernel-level injection, no injection flags (hard to detect)
+3. Hardware emulator (Phase 3, future) - Arduino/USB HID, completely undetectable
+
+**Backend Selection:**
+```bash
+npm start                           # Auto-select best available
+npm start -- --backend=robotjs      # Force RobotJS
+npm start -- --backend=interception # Force Interception (requires driver)
+npm start -- --backend=mock         # Testing mode (no keypresses)
+npm start -- --backends             # Show available backends
+```
 
 ## External Dependencies
 - **React**: Frontend library.

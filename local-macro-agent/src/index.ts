@@ -3,37 +3,59 @@
 // ============================================================================
 
 import { GestureDetector } from './gestureDetector.js';
-import { SequenceExecutor } from './sequenceExecutor.js';
+import { SequenceExecutor, ExecutionEvent } from './sequenceExecutor.js';
 import { InputListener, KeyEvent, MouseEvent } from './inputListener.js';
 import { ProfileLoader, DEFAULT_GESTURE_SETTINGS } from './profileLoader.js';
 import { MacroProfile, GestureEvent, MacroBinding } from './types.js';
+import { ExecutorFactory, IExecutor, ExecutorBackend } from './executorFactory.js';
+
+// Event callback for logging
+function createEventCallback(): (event: ExecutionEvent) => void {
+  return (event) => {
+    if (event.type === 'started') {
+      console.log(`⚡ Started: ${event.bindingName}`);
+    } else if (event.type === 'completed') {
+      console.log(`✅ Completed: ${event.bindingName}`);
+    } else if (event.type === 'error') {
+      console.error(`❌ Error: ${event.bindingName} - ${event.error}`);
+    }
+  };
+}
 
 class MacroAgent {
   private profile: MacroProfile | null = null;
   private gestureDetector: GestureDetector | null = null;
-  private sequenceExecutor: SequenceExecutor;
+  private executor: IExecutor | null = null;
   private inputListener: InputListener;
   private profileLoader: ProfileLoader;
+  private currentBackend: ExecutorBackend = 'robotjs';
 
   constructor() {
     this.profileLoader = new ProfileLoader('./profiles');
-
-    // Create sequence executor with event logging
-    this.sequenceExecutor = new SequenceExecutor((event) => {
-      // Log execution events
-      if (event.type === 'started') {
-        console.log(`⚡ Started: ${event.bindingName}`);
-      } else if (event.type === 'completed') {
-        console.log(`✅ Completed: ${event.bindingName}`);
-      } else if (event.type === 'error') {
-        console.error(`❌ Error: ${event.bindingName} - ${event.error}`);
-      }
-    });
 
     // Create input listener
     this.inputListener = new InputListener((event) => {
       this.handleInputEvent(event);
     });
+  }
+
+  /**
+   * Initialize the executor with specified backend
+   */
+  async initializeExecutor(backend?: ExecutorBackend): Promise<void> {
+    if (backend) {
+      // Use specified backend
+      this.executor = await ExecutorFactory.create({
+        backend,
+        onEvent: createEventCallback(),
+      });
+      this.currentBackend = backend;
+    } else {
+      // Auto-select best available
+      const result = await ExecutorFactory.createBest(createEventCallback());
+      this.executor = result.executor;
+      this.currentBackend = result.backend;
+    }
   }
 
   /**
@@ -63,7 +85,7 @@ class MacroAgent {
    * Handle detected gestures
    */
   private handleGesture(event: GestureEvent): void {
-    if (!this.profile) return;
+    if (!this.profile || !this.executor) return;
 
     console.log(`\n🎯 Gesture: ${event.inputKey} → ${event.gesture}`);
 
@@ -76,7 +98,7 @@ class MacroAgent {
 
     if (binding) {
       console.log(`   Matched: "${binding.name}"`);
-      this.sequenceExecutor.execute(binding);
+      this.executor.execute(binding);
     } else {
       console.log(`   No macro bound`);
     }
@@ -106,10 +128,14 @@ class MacroAgent {
   /**
    * Start the macro agent
    */
-  start(): void {
+  async start(backend?: ExecutorBackend): Promise<void> {
     console.log('\n╔════════════════════════════════════════════════════╗');
     console.log('║       SWTOR MACRO AGENT - Per-Key Gestures         ║');
     console.log('╚════════════════════════════════════════════════════╝\n');
+
+    // Initialize executor
+    await this.initializeExecutor(backend);
+    console.log(`\n🔧 Executor backend: ${this.currentBackend.toUpperCase()}`);
 
     // List available profiles
     const profiles = this.profileLoader.listProfiles();
@@ -160,26 +186,34 @@ class MacroAgent {
    */
   stop(): void {
     this.inputListener.stop();
-    this.sequenceExecutor.cancelAll();
+    if (this.executor && 'cancelAll' in this.executor) {
+      (this.executor as any).cancelAll?.();
+    }
+    if (this.executor && 'destroy' in this.executor) {
+      (this.executor as any).destroy?.();
+    }
     console.log('🛑 Macro Agent stopped');
   }
 
   /**
-   * Run a dry test of a specific binding
+   * Get current backend
    */
-  async testBinding(name: string): Promise<void> {
-    if (!this.profile) {
-      console.error('❌ No profile loaded');
-      return;
-    }
+  getBackend(): ExecutorBackend {
+    return this.currentBackend;
+  }
 
-    const binding = this.profile.macros.find(m => m.name === name);
-    if (!binding) {
-      console.error(`❌ Binding "${name}" not found`);
-      return;
+  /**
+   * Show available backends
+   */
+  static async showBackends(): Promise<void> {
+    console.log('\n📊 Available executor backends:\n');
+    const backends = await ExecutorFactory.getAvailableBackends();
+    
+    for (const { backend, available, notes } of backends) {
+      const status = available ? '✅' : '❌';
+      console.log(`  ${status} ${backend.toUpperCase()}`);
+      console.log(`     ${notes}\n`);
     }
-
-    await this.sequenceExecutor.dryRun(binding);
   }
 }
 
@@ -187,18 +221,67 @@ class MacroAgent {
 // MAIN
 // ============================================================================
 
-const agent = new MacroAgent();
+async function main() {
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  
+  // Show help
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+SWTOR Macro Agent - Per-Key Gesture Detection
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  agent.stop();
-  process.exit(0);
-});
+USAGE:
+  npm start                    Auto-select best executor
+  npm start -- --backend=X     Use specific backend
+  npm start -- --backends      Show available backends
+  npm start -- --help          Show this help
 
-process.on('SIGTERM', () => {
-  agent.stop();
-  process.exit(0);
-});
+BACKENDS:
+  robotjs       RobotJS (SendInput API) - Medium detection risk
+  interception  Interception Driver - Hard to detect (kernel-level)
+  mock          Mock executor (no keypresses) - For testing
 
-// Start the agent
-agent.start();
+EXAMPLES:
+  npm start -- --backend=robotjs
+  npm start -- --backend=interception
+  npm start -- --backends
+
+ENVIRONMENT:
+  MACRO_BACKEND=interception   Set default backend via env var
+`);
+    process.exit(0);
+  }
+
+  // Show available backends
+  if (args.includes('--backends')) {
+    await MacroAgent.showBackends();
+    process.exit(0);
+  }
+
+  // Parse backend option
+  let backend: ExecutorBackend | undefined;
+  const backendArg = args.find(a => a.startsWith('--backend='));
+  if (backendArg) {
+    backend = backendArg.split('=')[1] as ExecutorBackend;
+  } else if (process.env.MACRO_BACKEND) {
+    backend = process.env.MACRO_BACKEND as ExecutorBackend;
+  }
+
+  const agent = new MacroAgent();
+
+  // Handle graceful shutdown
+  process.on('SIGINT', () => {
+    agent.stop();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    agent.stop();
+    process.exit(0);
+  });
+
+  // Start the agent
+  await agent.start(backend);
+}
+
+main().catch(console.error);

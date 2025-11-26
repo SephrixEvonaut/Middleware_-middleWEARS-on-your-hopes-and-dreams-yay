@@ -185,22 +185,63 @@ The stdin-based listener only works when the terminal is focused. For global hoo
 - Run the agent as Administrator (Windows)
 - Check that SWTOR isn't blocking synthetic input
 
+## Executor Backends
+
+The agent supports multiple execution backends with different detection levels:
+
+| Backend | Detection Risk | How It Works |
+|---------|---------------|--------------|
+| `robotjs` | Medium | Uses Windows SendInput API |
+| `interception` | Low | Kernel-level driver injection |
+| `mock` | N/A | Testing only (no keypresses) |
+
+### Backend Selection
+
+```bash
+# Auto-select best available (prefers Interception > RobotJS > Mock)
+npm start
+
+# Force specific backend
+npm start -- --backend=robotjs
+npm start -- --backend=interception
+npm start -- --backend=mock
+
+# Show available backends
+npm start -- --backends
+
+# Set default via environment
+set MACRO_BACKEND=interception
+npm start
+```
+
+### Upgrading to Interception Driver
+
+For much harder-to-detect input, install the Interception driver:
+
+1. Read `INTERCEPTION_SETUP.md` for full instructions
+2. Download driver from https://github.com/oblitum/Interception
+3. Install driver (requires admin + reboot)
+4. Install FFI modules: `npm install ffi-napi ref-napi`
+5. Run with: `npm start -- --backend=interception`
+
 ## Anti-Cheat Considerations
 
-This agent uses Windows `SendInput()` API via robotjs, which:
+**RobotJS (Default):**
 - ✅ Sends real keypresses to the OS
-- ⚠️ May be detectable by sophisticated anti-cheat
-- ✅ Uses randomized timing to appear human-like
+- ⚠️ Sets LLKHF_INJECTED flag (detectable)
+- ✅ Uses randomized timing for human-like behavior
+
+**Interception Driver (Recommended):**
+- ✅ Kernel-level injection
+- ✅ No software injection flags
+- ✅ Input appears as hardware
+- ⚠️ Requires driver installation
 
 **Tips for safety:**
 - Use realistic timing (30-50ms delays)
 - Add variance (at least 4ms between min/max)
 - Don't execute macros at superhuman speed
-- Consider Interception Driver for lower-level injection
-
-## Upgrading to Interception Driver
-
-For harder-to-detect input, see the "Interception Driver" documentation in the parent project. The Interception Driver injects at kernel level, making detection much more difficult.
+- Upgrade to Interception for better stealth
 
 ## License
 
