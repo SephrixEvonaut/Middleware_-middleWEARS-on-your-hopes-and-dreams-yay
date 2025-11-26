@@ -189,12 +189,15 @@ export const SEQUENCE_CONSTRAINTS = {
   MIN_DELAY: 25,           // Never faster than 25ms
   MIN_VARIANCE: 4,         // max - min must be >= 4ms
   MAX_UNIQUE_KEYS: 4,      // Maximum 4 unique keys per sequence
-  MAX_REPEATS_PER_KEY: 6,  // Each key can repeat up to 6 times
+  MAX_STEPS_PER_KEY: 6,    // Maximum 6 steps per key (echoHits don't count toward this)
+  MAX_ECHO_HITS: 6,        // Each step can have 1-6 echo hits (repeats within the step)
+  MAX_REPEATS_PER_KEY: 6,  // Legacy alias for MAX_ECHO_HITS - kept for backward compatibility
 } as const;
 
 // Single step in a macro sequence
 export const sequenceStepSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),                          // Optional step name for visualization
   key: z.string().min(1, "Key is required"),           // The key to press (e.g., "a", "f1")
   minDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY, 
     `Minimum delay must be at least ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms`),
@@ -280,31 +283,33 @@ export type MacroProfile = z.infer<typeof macroProfileSchema>;
 export function validateSequence(steps: SequenceStep[]): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
-  // Expand echo hits to count actual keypresses
-  const expandedSteps: { key: string }[] = [];
-  for (const step of steps) {
-    for (let i = 0; i < (step.echoHits || 1); i++) {
-      expandedSteps.push({ key: step.key });
-    }
-  }
-  
-  // Count unique keys
-  const uniqueKeys = new Set(expandedSteps.map(s => s.key));
+  // Count unique keys from original steps (not expanded)
+  const uniqueKeys = new Set(steps.map(s => s.key));
   if (uniqueKeys.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
     errors.push(`Too many unique keys: ${uniqueKeys.size}/${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`);
   }
   
-  // Count repeats per key
-  const keyCounts = new Map<string, number>();
-  for (const step of expandedSteps) {
-    keyCounts.set(step.key, (keyCounts.get(step.key) || 0) + 1);
+  // Count STEPS per key (not expanded presses - echoHits don't count toward step budget)
+  // Max 6 steps per key, where each step can have 1-6 echoHits independently
+  const stepCounts = new Map<string, number>();
+  for (const step of steps) {
+    stepCounts.set(step.key, (stepCounts.get(step.key) || 0) + 1);
   }
   
-  Array.from(keyCounts.entries()).forEach(([key, count]) => {
-    if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-      errors.push(`Key "${key}" exceeds max repeats: ${count}/${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
+  Array.from(stepCounts.entries()).forEach(([key, count]) => {
+    if (count > SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY) {
+      errors.push(`Key "${key}" exceeds max steps: ${count}/${SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY}`);
     }
   });
+  
+  // Validate echoHits per step (1-6 per step)
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const echoHits = step.echoHits || 1;
+    if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS) {
+      errors.push(`Step ${i + 1}: echoHits ${echoHits} must be 1-${SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS}`);
+    }
+  }
   
   // Check timing constraints
   for (let i = 0; i < steps.length; i++) {

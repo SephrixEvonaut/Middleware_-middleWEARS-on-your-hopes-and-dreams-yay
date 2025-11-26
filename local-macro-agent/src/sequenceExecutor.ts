@@ -58,8 +58,8 @@ export class SequenceExecutor {
       
       // Check echoHits constraint
       const echoHits = step.echoHits || 1;
-      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        return `Step ${i} ("${step.key}"): echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`;
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS) {
+        return `Step ${i} ("${step.key}"): echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS} (got ${echoHits})`;
       }
     }
 
@@ -79,8 +79,8 @@ export class SequenceExecutor {
 
     // Check max steps per key (echoHits are separate - they're just repetitions within a step)
     for (const [key, count] of keyStepCount) {
-      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        return `Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`;
+      if (count > SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY) {
+        return `Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY} steps per key`;
       }
     }
 

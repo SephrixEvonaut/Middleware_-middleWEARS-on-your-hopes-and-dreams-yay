@@ -304,8 +304,8 @@ export class InterceptionExecutor {
 
       // Echo hits check (per-step, 1-6 allowed)
       const echoHits = step.echoHits || 1;
-      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS) {
+        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS} (got ${echoHits})`);
       }
 
       // Count steps per key (NOT including echoHits - those are just repetitions)
@@ -321,8 +321,8 @@ export class InterceptionExecutor {
 
     // Check max steps per key (echoHits are separate - they're just repetitions within a step)
     for (const [key, count] of keyStepCount) {
-      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`);
+      if (count > SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY) {
+        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY} steps per key`);
       }
     }
 
@@ -434,8 +434,8 @@ export class MockInterceptionExecutor {
       
       // Echo hits check (per-step, 1-6 allowed)
       const echoHits = step.echoHits || 1;
-      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
+      if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS) {
+        errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_ECHO_HITS} (got ${echoHits})`);
       }
 
       // Count steps per key (NOT including echoHits)
@@ -446,8 +446,8 @@ export class MockInterceptionExecutor {
 
     // Check max steps per key (echoHits are separate)
     for (const [key, count] of keyStepCount) {
-      if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`);
+      if (count > SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY) {
+        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_STEPS_PER_KEY} steps per key`);
       }
     }
 

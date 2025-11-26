@@ -30,6 +30,7 @@ export type GestureType = typeof GESTURE_TYPES[number];
 // Timing configuration for a single keypress in a sequence
 export interface SequenceStep {
   key: string;           // The key to press (e.g., "a", "b", "f1")
+  name?: string;         // Optional step name for display/debugging
   minDelay: number;      // Minimum ms before next press (>= 25ms)
   maxDelay: number;      // Maximum ms before next press (variance >= 4ms)
   echoHits?: number;     // Number of times to repeat this key (1-6, default 1)
@@ -78,5 +79,7 @@ export const SEQUENCE_CONSTRAINTS = {
   MIN_DELAY: 25,           // Never faster than 25ms
   MIN_VARIANCE: 4,         // max - min must be >= 4ms
   MAX_UNIQUE_KEYS: 4,      // Maximum 4 unique keys per sequence
-  MAX_REPEATS_PER_KEY: 6,  // Each key can repeat up to 6 times
+  MAX_STEPS_PER_KEY: 6,    // Maximum 6 steps per key (echoHits don't count toward this)
+  MAX_ECHO_HITS: 6,        // Each step can have 1-6 echo hits (repeats within the step)
+  MAX_REPEATS_PER_KEY: 6,  // Legacy alias for MAX_ECHO_HITS - kept for backward compatibility
 } as const;
