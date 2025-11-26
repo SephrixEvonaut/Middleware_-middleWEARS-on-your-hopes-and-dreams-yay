@@ -63,25 +63,24 @@ export class SequenceExecutor {
       }
     }
 
-    // Count unique keys and TOTAL repetitions (including echoHits)
+    // Count STEPS per key (not total presses - echoHits don't count toward step limit)
     // Normalize to lowercase for consistent counting
-    const keyCount: Map<string, number> = new Map();
+    const keyStepCount: Map<string, number> = new Map();
     for (const step of sequence) {
       const normalizedKey = step.key.toLowerCase();
-      const echoHits = step.echoHits || 1;
-      const count = keyCount.get(normalizedKey) || 0;
-      keyCount.set(normalizedKey, count + echoHits);
+      const count = keyStepCount.get(normalizedKey) || 0;
+      keyStepCount.set(normalizedKey, count + 1);
     }
 
     // Check max unique keys
-    if (keyCount.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
-      return `Sequence has ${keyCount.size} unique keys, maximum is ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`;
+    if (keyStepCount.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
+      return `Sequence has ${keyStepCount.size} unique keys, maximum is ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`;
     }
 
-    // Check max total repeats per key (across all steps)
-    for (const [key, count] of keyCount) {
+    // Check max steps per key (echoHits are separate - they're just repetitions within a step)
+    for (const [key, count] of keyStepCount) {
       if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        return `Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`;
+        return `Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`;
       }
     }
 

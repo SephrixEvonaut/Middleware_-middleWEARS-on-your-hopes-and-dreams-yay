@@ -286,8 +286,8 @@ export class InterceptionExecutor {
       errors.push(`Too many unique keys: ${uniqueKeys.size} (max ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS})`);
     }
 
-    // Count total key presses per key (including echoHits)
-    const keyPressCount: Map<string, number> = new Map();
+    // Count STEPS per key (not total presses - echoHits don't count toward step limit)
+    const keyStepCount: Map<string, number> = new Map();
 
     // Check each step
     for (const step of sequence) {
@@ -302,16 +302,16 @@ export class InterceptionExecutor {
         errors.push(`Step ${step.key}: variance ${variance}ms < minimum ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms`);
       }
 
-      // Echo hits check (per-step)
+      // Echo hits check (per-step, 1-6 allowed)
       const echoHits = step.echoHits || 1;
       if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
         errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
       }
 
-      // Accumulate total presses for this key
+      // Count steps per key (NOT including echoHits - those are just repetitions)
       const normalizedKey = step.key.toLowerCase();
-      const current = keyPressCount.get(normalizedKey) || 0;
-      keyPressCount.set(normalizedKey, current + echoHits);
+      const current = keyStepCount.get(normalizedKey) || 0;
+      keyStepCount.set(normalizedKey, current + 1);
 
       // Key mapping check
       if (!this.getScanCodeEntry(step.key)) {
@@ -319,10 +319,10 @@ export class InterceptionExecutor {
       }
     }
 
-    // Check max total repeats per key (across all steps)
-    for (const [key, count] of keyPressCount) {
+    // Check max steps per key (echoHits are separate - they're just repetitions within a step)
+    for (const [key, count] of keyStepCount) {
       if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
+        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`);
       }
     }
 
@@ -420,8 +420,8 @@ export class MockInterceptionExecutor {
       errors.push(`Too many unique keys: ${uniqueKeys.size} (max ${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS})`);
     }
 
-    // Count total key presses per key (including echoHits)
-    const keyPressCount: Map<string, number> = new Map();
+    // Count STEPS per key (not total presses - echoHits don't count toward step limit)
+    const keyStepCount: Map<string, number> = new Map();
 
     for (const step of sequence) {
       if (step.minDelay < SEQUENCE_CONSTRAINTS.MIN_DELAY) {
@@ -432,22 +432,22 @@ export class MockInterceptionExecutor {
         errors.push(`Step ${step.key}: variance ${variance}ms < minimum ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms`);
       }
       
-      // Echo hits check (per-step)
+      // Echo hits check (per-step, 1-6 allowed)
       const echoHits = step.echoHits || 1;
       if (echoHits < 1 || echoHits > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
         errors.push(`Step ${step.key}: echoHits must be 1-${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} (got ${echoHits})`);
       }
 
-      // Accumulate total presses for this key
+      // Count steps per key (NOT including echoHits)
       const normalizedKey = step.key.toLowerCase();
-      const current = keyPressCount.get(normalizedKey) || 0;
-      keyPressCount.set(normalizedKey, current + echoHits);
+      const current = keyStepCount.get(normalizedKey) || 0;
+      keyStepCount.set(normalizedKey, current + 1);
     }
 
-    // Check max total repeats per key (across all steps)
-    for (const [key, count] of keyPressCount) {
+    // Check max steps per key (echoHits are separate)
+    for (const [key, count] of keyStepCount) {
       if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
-        errors.push(`Key "${key}" pressed ${count} times total (including echoHits), maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
+        errors.push(`Key "${key}" used in ${count} steps, maximum is ${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY} steps per key`);
       }
     }
 
