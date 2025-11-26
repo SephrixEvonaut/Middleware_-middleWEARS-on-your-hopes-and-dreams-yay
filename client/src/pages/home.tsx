@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Save, Star } from "lucide-react";
@@ -15,7 +15,8 @@ import { ModifierToggle } from "@/components/modifier-toggle";
 import { MappingDesigner } from "@/components/mapping-designer";
 import { ProfileExport } from "@/components/profile-export";
 import { ProfileImport } from "@/components/profile-import";
-import type { Profile } from "@shared/schema";
+import { SequenceBuilder } from "@/components/sequence-builder";
+import type { Profile, MacroProfile } from "@shared/schema";
 
 interface HomeProps {
   currentProfile: Profile;
@@ -46,6 +47,22 @@ export default function Home({
   const { toast } = useToast();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { modifierState, toggleModifier, setMode, resetToDefaults, hasChanges: hasModifierChanges } = useModifierContext();
+
+  // Macro profile state for Sequence Builder
+  const [macroProfile, setMacroProfile] = useState<MacroProfile>({
+    name: currentProfile.name + " Macros",
+    description: "Macro sequences for local agent",
+    gestureSettings: {
+      multiPressWindow: 350,
+      debounceDelay: 10,
+      longPressMin: 80,
+      longPressMax: 140,
+      superLongMin: 300,
+      superLongMax: 2000,
+      cancelThreshold: 3000,
+    },
+    macros: [],
+  });
 
   const handleProfileChange = (updates: Partial<Profile>) => {
     const updatedProfile = { ...currentProfile, ...updates };
@@ -126,6 +143,9 @@ export default function Home({
             </TabsTrigger>
             <TabsTrigger value="map" data-testid="tab-map">
               Input Mappings
+            </TabsTrigger>
+            <TabsTrigger value="sequences" data-testid="tab-sequences">
+              Sequence Builder
             </TabsTrigger>
           </TabsList>
 
@@ -268,6 +288,13 @@ export default function Home({
               onUpdate={(updatedProfile) =>
                 onProfileUpdate(updatedProfile)
               }
+            />
+          </TabsContent>
+
+          <TabsContent value="sequences" className="h-[calc(100vh-280px)]" data-testid="tab-content-sequences">
+            <SequenceBuilder
+              macroProfile={macroProfile}
+              onUpdate={setMacroProfile}
             />
           </TabsContent>
         </Tabs>

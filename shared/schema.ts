@@ -179,3 +179,139 @@ export const gestureEventSchema = z.object({
 });
 
 export type GestureEvent = z.infer<typeof gestureEventSchema>;
+
+// ============================================================================
+// MACRO SEQUENCE SCHEMA - For local macro agent execution
+// ============================================================================
+
+// Sequence step timing constraints
+export const SEQUENCE_CONSTRAINTS = {
+  MIN_DELAY: 25,           // Never faster than 25ms
+  MIN_VARIANCE: 4,         // max - min must be >= 4ms
+  MAX_UNIQUE_KEYS: 4,      // Maximum 4 unique keys per sequence
+  MAX_REPEATS_PER_KEY: 6,  // Each key can repeat up to 6 times
+} as const;
+
+// Single step in a macro sequence
+export const sequenceStepSchema = z.object({
+  id: z.string(),
+  key: z.string().min(1, "Key is required"),           // The key to press (e.g., "a", "f1")
+  minDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY, 
+    `Minimum delay must be at least ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms`),
+  maxDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY + SEQUENCE_CONSTRAINTS.MIN_VARIANCE),
+  echoHits: z.number().min(1).max(SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY).default(1), // Repetitions
+});
+
+export type SequenceStep = z.infer<typeof sequenceStepSchema>;
+
+// Trigger gesture types for macro sequences (matches local agent)
+export const macroGestureTypeSchema = z.enum([
+  "single",
+  "long",
+  "double",
+  "double_long",
+  "triple",
+  "triple_long",
+  "quadruple_long",
+  "super_long",
+  "cancel",
+]);
+
+export type MacroGestureType = z.infer<typeof macroGestureTypeSchema>;
+
+// Available trigger keys (22 input keys)
+export const MACRO_TRIGGER_KEYS = [
+  "W", "A", "S", "D",
+  "B", "I", "T", "C", "H", "Y", "U", "P",
+  "1", "2", "3", "4", "5", "6",
+  "LEFT_CLICK", "RIGHT_CLICK", "MIDDLE_CLICK", "SCROLL_UP"
+] as const;
+
+export const macroTriggerKeySchema = z.enum(MACRO_TRIGGER_KEYS);
+
+export type MacroTriggerKey = z.infer<typeof macroTriggerKeySchema>;
+
+// Complete macro binding
+export const macroBindingSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Macro name is required"),
+  description: z.string().optional(),
+  trigger: z.object({
+    key: macroTriggerKeySchema,
+    gesture: macroGestureTypeSchema,
+  }),
+  sequence: z.array(sequenceStepSchema),
+  enabled: z.boolean().default(true),
+});
+
+export type MacroBinding = z.infer<typeof macroBindingSchema>;
+
+// Gesture detection settings for local agent
+export const macroGestureSettingsSchema = z.object({
+  multiPressWindow: z.number().min(100).max(1000).default(350),
+  debounceDelay: z.number().min(0).max(50).default(10),
+  longPressMin: z.number().min(50).max(300).default(80),
+  longPressMax: z.number().min(100).max(500).default(140),
+  superLongMin: z.number().min(200).max(1000).default(300),
+  superLongMax: z.number().min(500).max(5000).default(2000),
+  cancelThreshold: z.number().min(1000).max(10000).default(3000),
+});
+
+export type MacroGestureSettings = z.infer<typeof macroGestureSettingsSchema>;
+
+// Complete macro profile for export to local agent
+export const macroProfileSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  gestureSettings: macroGestureSettingsSchema,
+  macros: z.array(macroBindingSchema),
+});
+
+export type MacroProfile = z.infer<typeof macroProfileSchema>;
+
+// Validation helper to check sequence constraints
+export function validateSequence(steps: SequenceStep[]): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Expand echo hits to count actual keypresses
+  const expandedSteps: { key: string }[] = [];
+  for (const step of steps) {
+    for (let i = 0; i < (step.echoHits || 1); i++) {
+      expandedSteps.push({ key: step.key });
+    }
+  }
+  
+  // Count unique keys
+  const uniqueKeys = new Set(expandedSteps.map(s => s.key));
+  if (uniqueKeys.size > SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS) {
+    errors.push(`Too many unique keys: ${uniqueKeys.size}/${SEQUENCE_CONSTRAINTS.MAX_UNIQUE_KEYS}`);
+  }
+  
+  // Count repeats per key
+  const keyCounts = new Map<string, number>();
+  for (const step of expandedSteps) {
+    keyCounts.set(step.key, (keyCounts.get(step.key) || 0) + 1);
+  }
+  
+  Array.from(keyCounts.entries()).forEach(([key, count]) => {
+    if (count > SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY) {
+      errors.push(`Key "${key}" exceeds max repeats: ${count}/${SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}`);
+    }
+  });
+  
+  // Check timing constraints
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    
+    if (step.minDelay < SEQUENCE_CONSTRAINTS.MIN_DELAY) {
+      errors.push(`Step ${i + 1}: minDelay ${step.minDelay}ms < ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms minimum`);
+    }
+    
+    const variance = step.maxDelay - step.minDelay;
+    if (variance < SEQUENCE_CONSTRAINTS.MIN_VARIANCE) {
+      errors.push(`Step ${i + 1}: variance ${variance}ms < ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms minimum`);
+    }
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
