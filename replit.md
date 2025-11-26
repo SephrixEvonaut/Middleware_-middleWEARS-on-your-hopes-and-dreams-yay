@@ -28,8 +28,40 @@ Core features include:
 - **Hold Timer Visualization**: Real-time progress bar for hold duration with color-coded thresholds.
 - **Practice Range**: Inline timing controls with MS-precision sliders, timing presets (Competitive, Balanced, Learning), and real-time statistics (attempts, successes, accuracy).
 - **SWTOR Keybind Export System**: Generates valid SWTOR KeyBindings XML files with modifier-mode filtering. Each modifier mode exports independently with unique safe key assignments. Validates that only 68 "bare naked keys" (excludes Alt/Shift/Ctrl/Win/Tab/Caps/Esc/Del/PrtScrn/Enter/Backspace/Insert) are used in final outputs for anti-cheat compliance.
+- **Sequence Builder**: UI for creating macro sequences with precise timing controls:
+  - Per-step min/max delay configuration (enforces 25ms minimum, 4ms variance)
+  - Echo hits (repetitions) per key (max 6 per key)
+  - Maximum 4 unique keys per sequence
+  - Visual timeline showing keypress sequence
+  - Global timing defaults with "Apply to All" functionality
+  - Validation prevents export of invalid sequences
+  - Export to JSON format for Local Macro Agent
 
 The architecture is designed for 1:1 input/output ratio compliance, essential for anti-cheat systems. **Critical requirement fulfilled**: Modifiers operate at detection layer only - final game inputs never contain Alt/Shift/Ctrl to prevent interference with game keybinds.
+
+## Local Macro Agent (Phase 1 - RobotJS)
+
+A standalone Node.js application in `local-macro-agent/` that runs on the user's gaming PC:
+
+**Features:**
+- 22 input keys for gesture detection (WASD, B, I, T, C, H, Y, U, P, 1-6, mouse buttons)
+- 9 gesture types: single, long, double, double_long, triple, triple_long, quadruple_long, super_long, cancel
+- Per-key isolated gesture state machines
+- Human-like timing with configurable min/max delays and randomization
+- Sequence constraints: min 25ms delay, 4ms+ variance, max 4 unique keys, max 6 repeats per key
+
+**Files:**
+- `local-macro-agent/src/index.ts` - Main entry point
+- `local-macro-agent/src/gestureDetector.ts` - 22 independent gesture state machines
+- `local-macro-agent/src/sequenceExecutor.ts` - Keypress sender with timing validation
+- `local-macro-agent/src/inputListener.ts` - Global keyboard/mouse hooks (stdin for testing, iohook for production)
+- `local-macro-agent/src/profileLoader.ts` - JSON profile validation and loading
+- `local-macro-agent/profiles/example.json` - Example SWTOR macro profile
+
+**Detection Hierarchy:**
+1. RobotJS (current) - Uses SendInput(), detectable by sophisticated anti-cheat
+2. Interception Driver (future upgrade) - Kernel-level injection, much harder to detect
+3. Hardware emulator (ultimate) - Arduino/USB HID, completely undetectable
 
 ## External Dependencies
 - **React**: Frontend library.

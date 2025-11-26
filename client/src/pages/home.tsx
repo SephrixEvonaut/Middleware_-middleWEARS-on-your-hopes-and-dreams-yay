@@ -60,6 +60,9 @@ export default function Home({
       superLongMin: 300,
       superLongMax: 2000,
       cancelThreshold: 3000,
+      defaultMinDelay: 30,
+      defaultMaxDelay: 40,
+      defaultEchoHits: 1,
     },
     macros: [],
   });

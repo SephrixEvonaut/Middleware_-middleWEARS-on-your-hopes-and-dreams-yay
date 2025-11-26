@@ -12,6 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Plus,
   Trash2,
   Copy,
@@ -20,6 +25,7 @@ import {
   Pause,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -27,6 +33,7 @@ import {
   Zap,
   Settings,
   GripVertical,
+  Wand2,
 } from "lucide-react";
 import {
   type MacroBinding,
@@ -75,13 +82,13 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
-function createDefaultStep(): SequenceStep {
+function createDefaultStep(settings?: { defaultMinDelay?: number; defaultMaxDelay?: number; defaultEchoHits?: number }): SequenceStep {
   return {
     id: generateId(),
     key: "a",
-    minDelay: 30,
-    maxDelay: 40,
-    echoHits: 1,
+    minDelay: settings?.defaultMinDelay ?? 30,
+    maxDelay: settings?.defaultMaxDelay ?? 40,
+    echoHits: settings?.defaultEchoHits ?? 1,
   };
 }
 
@@ -105,6 +112,18 @@ export function SequenceBuilder({ macroProfile, onUpdate }: SequenceBuilderProps
     macroProfile.macros[0]?.id ?? null
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Update global settings
+  const updateSettings = useCallback(
+    (updates: Partial<typeof macroProfile.gestureSettings>) => {
+      onUpdate({
+        ...macroProfile,
+        gestureSettings: { ...macroProfile.gestureSettings, ...updates },
+      });
+    },
+    [macroProfile, onUpdate]
+  );
 
   const selectedMacro = useMemo(
     () => macroProfile.macros.find((m) => m.id === selectedMacroId) ?? null,
@@ -180,16 +199,16 @@ export function SequenceBuilder({ macroProfile, onUpdate }: SequenceBuilderProps
     [macroProfile.macros, updateMacro]
   );
 
-  // Add step to sequence
+  // Add step to sequence (using global defaults)
   const addStep = useCallback(
     (macroId: string) => {
       const macro = macroProfile.macros.find((m) => m.id === macroId);
       if (!macro) return;
       updateMacro(macroId, {
-        sequence: [...macro.sequence, createDefaultStep()],
+        sequence: [...macro.sequence, createDefaultStep(macroProfile.gestureSettings)],
       });
     },
-    [macroProfile.macros, updateMacro]
+    [macroProfile.macros, macroProfile.gestureSettings, updateMacro]
   );
 
   // Remove step from sequence
@@ -220,12 +239,54 @@ export function SequenceBuilder({ macroProfile, onUpdate }: SequenceBuilderProps
     [macroProfile.macros, updateMacro]
   );
 
-  // Export to JSON
+  // Check if any macros have validation errors
+  const hasAnyErrors = useMemo(() => {
+    return macroProfile.macros.some((m) => !validateSequence(m.sequence).valid);
+  }, [macroProfile.macros]);
+
+  // Apply defaults to all steps in selected macro
+  const applyDefaultsToAll = useCallback(() => {
+    if (!selectedMacroId) return;
+    const macro = macroProfile.macros.find((m) => m.id === selectedMacroId);
+    if (!macro) return;
+    
+    const { defaultMinDelay, defaultMaxDelay, defaultEchoHits } = macroProfile.gestureSettings;
+    const newSequence = macro.sequence.map((step) => ({
+      ...step,
+      minDelay: defaultMinDelay,
+      maxDelay: defaultMaxDelay,
+      echoHits: defaultEchoHits,
+    }));
+    
+    updateMacro(selectedMacroId, { sequence: newSequence });
+    toast({ title: "Defaults applied", description: "All steps updated with global timing settings." });
+  }, [selectedMacroId, macroProfile, updateMacro, toast]);
+
+  // Export to JSON (only if all macros are valid)
   const exportProfile = useCallback(() => {
+    // Validate all macros before export
+    const invalidMacros = macroProfile.macros.filter((m) => !validateSequence(m.sequence).valid);
+    if (invalidMacros.length > 0) {
+      toast({
+        title: "Cannot export",
+        description: `${invalidMacros.length} macro(s) have validation errors. Fix them first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const exportData = {
       name: macroProfile.name,
       description: macroProfile.description,
-      gestureSettings: macroProfile.gestureSettings,
+      gestureSettings: {
+        multiPressWindow: macroProfile.gestureSettings.multiPressWindow,
+        debounceDelay: macroProfile.gestureSettings.debounceDelay,
+        longPressMin: macroProfile.gestureSettings.longPressMin,
+        longPressMax: macroProfile.gestureSettings.longPressMax,
+        superLongMin: macroProfile.gestureSettings.superLongMin,
+        superLongMax: macroProfile.gestureSettings.superLongMax,
+        cancelThreshold: macroProfile.gestureSettings.cancelThreshold,
+      },
       macros: macroProfile.macros.map((m) => ({
         name: m.name,
         trigger: m.trigger,
@@ -358,11 +419,17 @@ export function SequenceBuilder({ macroProfile, onUpdate }: SequenceBuilderProps
             variant="outline"
             className="w-full"
             onClick={exportProfile}
+            disabled={hasAnyErrors || macroProfile.macros.length === 0}
             data-testid="button-export-macros"
           >
             <Download className="w-4 h-4 mr-2" />
             Export for Local Agent
           </Button>
+          {hasAnyErrors && (
+            <p className="text-xs text-destructive mt-2 text-center">
+              Fix validation errors before exporting
+            </p>
+          )}
         </div>
       </Card>
 
@@ -731,6 +798,88 @@ export function SequenceBuilder({ macroProfile, onUpdate }: SequenceBuilderProps
                   </Card>
                 ))}
               </div>
+
+              {/* Global Timing Defaults */}
+              <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <Card className="p-4">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Global Timing Defaults
+                    </h4>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${settingsOpen ? "rotate-90" : ""}`} />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Default Min Delay (ms)</Label>
+                        <Input
+                          type="number"
+                          value={macroProfile.gestureSettings.defaultMinDelay}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || SEQUENCE_CONSTRAINTS.MIN_DELAY;
+                            updateSettings({
+                              defaultMinDelay: Math.max(SEQUENCE_CONSTRAINTS.MIN_DELAY, val),
+                              defaultMaxDelay: Math.max(val + SEQUENCE_CONSTRAINTS.MIN_VARIANCE, macroProfile.gestureSettings.defaultMaxDelay),
+                            });
+                          }}
+                          min={SEQUENCE_CONSTRAINTS.MIN_DELAY}
+                          className="mt-1 font-mono"
+                          data-testid="input-default-min-delay"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Default Max Delay (ms)</Label>
+                        <Input
+                          type="number"
+                          value={macroProfile.gestureSettings.defaultMaxDelay}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || macroProfile.gestureSettings.defaultMinDelay + SEQUENCE_CONSTRAINTS.MIN_VARIANCE;
+                            updateSettings({
+                              defaultMaxDelay: Math.max(macroProfile.gestureSettings.defaultMinDelay + SEQUENCE_CONSTRAINTS.MIN_VARIANCE, val),
+                            });
+                          }}
+                          min={macroProfile.gestureSettings.defaultMinDelay + SEQUENCE_CONSTRAINTS.MIN_VARIANCE}
+                          className="mt-1 font-mono"
+                          data-testid="input-default-max-delay"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Default Echo Hits</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Slider
+                            value={[macroProfile.gestureSettings.defaultEchoHits]}
+                            onValueChange={([v]) => updateSettings({ defaultEchoHits: v })}
+                            min={1}
+                            max={SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY}
+                            step={1}
+                            className="flex-1"
+                            data-testid="slider-default-echo-hits"
+                          />
+                          <span className="w-6 text-center text-sm font-mono">
+                            {macroProfile.gestureSettings.defaultEchoHits}x
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={applyDefaultsToAll}
+                        disabled={!selectedMacro || selectedMacro.sequence.length === 0}
+                        data-testid="button-apply-defaults"
+                      >
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        Apply to All Steps
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Applies current defaults to all steps in the selected macro
+                      </p>
+                    </div>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
 
               {/* Constraints Info */}
               <Card className="p-4 bg-muted/30">

@@ -200,7 +200,10 @@ export const sequenceStepSchema = z.object({
     `Minimum delay must be at least ${SEQUENCE_CONSTRAINTS.MIN_DELAY}ms`),
   maxDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY + SEQUENCE_CONSTRAINTS.MIN_VARIANCE),
   echoHits: z.number().min(1).max(SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY).default(1), // Repetitions
-});
+}).refine(
+  (step) => step.maxDelay - step.minDelay >= SEQUENCE_CONSTRAINTS.MIN_VARIANCE,
+  { message: `Variance (max - min) must be at least ${SEQUENCE_CONSTRAINTS.MIN_VARIANCE}ms` }
+);
 
 export type SequenceStep = z.infer<typeof sequenceStepSchema>;
 
@@ -255,6 +258,10 @@ export const macroGestureSettingsSchema = z.object({
   superLongMin: z.number().min(200).max(1000).default(300),
   superLongMax: z.number().min(500).max(5000).default(2000),
   cancelThreshold: z.number().min(1000).max(10000).default(3000),
+  // Global timing defaults for new steps
+  defaultMinDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY).max(200).default(30),
+  defaultMaxDelay: z.number().min(SEQUENCE_CONSTRAINTS.MIN_DELAY + SEQUENCE_CONSTRAINTS.MIN_VARIANCE).max(300).default(40),
+  defaultEchoHits: z.number().min(1).max(SEQUENCE_CONSTRAINTS.MAX_REPEATS_PER_KEY).default(1),
 });
 
 export type MacroGestureSettings = z.infer<typeof macroGestureSettingsSchema>;
