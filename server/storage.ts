@@ -1,4 +1,4 @@
-import { type Profile, type InsertProfile } from "@shared/schema";
+import { type Profile, type InsertProfile, type AbilityRegistry, type Ability } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -8,13 +8,22 @@ export interface IStorage {
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: string, profile: Partial<InsertProfile>): Promise<Profile | undefined>;
   deleteProfile(id: string): Promise<boolean>;
+  
+  // Ability Registry operations
+  getAbilityRegistry(): Promise<AbilityRegistry>;
+  updateAbilityRegistry(registry: AbilityRegistry): Promise<AbilityRegistry>;
+  addAbility(ability: Omit<Ability, 'id'>): Promise<Ability>;
+  updateAbility(id: string, updates: Partial<Ability>): Promise<Ability | undefined>;
+  deleteAbility(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private profiles: Map<string, Profile>;
+  private abilityRegistry: AbilityRegistry;
 
   constructor() {
     this.profiles = new Map();
+    this.abilityRegistry = { abilities: [], lastUpdated: new Date().toISOString() };
     this.seedDefaultProfile();
   }
 
@@ -72,6 +81,7 @@ export class MemStorage implements IStorage {
         shift: false,
         alt: false,
       },
+      abilityBindings: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -122,6 +132,54 @@ export class MemStorage implements IStorage {
 
   async deleteProfile(id: string): Promise<boolean> {
     return this.profiles.delete(id);
+  }
+
+  // Ability Registry operations
+  async getAbilityRegistry(): Promise<AbilityRegistry> {
+    return this.abilityRegistry;
+  }
+
+  async updateAbilityRegistry(registry: AbilityRegistry): Promise<AbilityRegistry> {
+    this.abilityRegistry = {
+      ...registry,
+      lastUpdated: new Date().toISOString(),
+    };
+    return this.abilityRegistry;
+  }
+
+  async addAbility(abilityData: Omit<Ability, 'id'>): Promise<Ability> {
+    const ability: Ability = {
+      ...abilityData,
+      id: randomUUID(),
+    };
+    this.abilityRegistry.abilities.push(ability);
+    this.abilityRegistry.lastUpdated = new Date().toISOString();
+    return ability;
+  }
+
+  async updateAbility(id: string, updates: Partial<Ability>): Promise<Ability | undefined> {
+    const index = this.abilityRegistry.abilities.findIndex(a => a.id === id);
+    if (index === -1) {
+      return undefined;
+    }
+    
+    this.abilityRegistry.abilities[index] = {
+      ...this.abilityRegistry.abilities[index],
+      ...updates,
+      id, // Preserve the original ID
+    };
+    this.abilityRegistry.lastUpdated = new Date().toISOString();
+    return this.abilityRegistry.abilities[index];
+  }
+
+  async deleteAbility(id: string): Promise<boolean> {
+    const index = this.abilityRegistry.abilities.findIndex(a => a.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.abilityRegistry.abilities.splice(index, 1);
+    this.abilityRegistry.lastUpdated = new Date().toISOString();
+    return true;
   }
 }
 

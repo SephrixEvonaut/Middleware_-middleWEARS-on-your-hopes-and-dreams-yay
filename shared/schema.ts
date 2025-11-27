@@ -111,6 +111,13 @@ export const inputMappingSchema = z.object({
   chargeLevel: z.number().min(0).max(100).optional(), // For charge_release gesture
 });
 
+// Profile ability binding schema (for profile-level ability selection)
+export const profileAbilityBindingsSchema = z.array(z.object({
+  keybind: z.string(),
+  abilityId: z.string(),
+  notes: z.string().optional(),
+})).default([]);
+
 // Drizzle Profile Table
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -127,6 +134,7 @@ export const profiles = pgTable("profiles", {
   gestureSettings: jsonb("gesture_settings").notNull().$type<z.infer<typeof gestureSettingsSchema>>(),
   inputMappings: jsonb("input_mappings").notNull().default([]).$type<z.infer<typeof inputMappingSchema>[]>(),
   modifierDefaults: jsonb("modifier_defaults").notNull().default({ ctrl: false, shift: false, alt: false }).$type<ModifierState>(),
+  abilityBindings: jsonb("ability_bindings").notNull().default([]).$type<z.infer<typeof profileAbilityBindingsSchema>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -138,6 +146,7 @@ export const insertProfileSchema = createInsertSchema(profiles, {
   gestureSettings: gestureSettingsSchema,
   inputMappings: z.array(inputMappingSchema).default([]),
   modifierDefaults: modifierStateSchema.default({ ctrl: false, shift: false, alt: false }),
+  abilityBindings: profileAbilityBindingsSchema,
 }).omit({
   id: true,
   createdAt: true,
@@ -154,6 +163,7 @@ export const profileSchema = z.object({
   gestureSettings: gestureSettingsSchema,
   inputMappings: z.array(inputMappingSchema),
   modifierDefaults: modifierStateSchema,
+  abilityBindings: profileAbilityBindingsSchema,
   createdAt: z.union([z.string(), z.date()]).optional(),
   updatedAt: z.union([z.string(), z.date()]).optional(),
 });
@@ -278,6 +288,67 @@ export const macroProfileSchema = z.object({
 });
 
 export type MacroProfile = z.infer<typeof macroProfileSchema>;
+
+// ============================================================================
+// ABILITY REGISTRY SCHEMA - For managing game abilities and keybindings
+// ============================================================================
+
+// Single ability with canonical name, aliases, and keybind
+export const abilitySchema = z.object({
+  id: z.string(),
+  canonicalName: z.string().min(1, "Ability name is required"),
+  aliases: z.array(z.string()).default([]),  // Alternative names, typos, nicknames
+  category: z.string().optional(),            // e.g., "DPS", "Healing", "Tank", "Utility"
+  description: z.string().optional(),
+  assignedKey: z.string().optional(),         // The keybind (e.g., "1", "F1", "Q")
+  icon: z.string().optional(),                // Icon reference (optional)
+});
+
+export type Ability = z.infer<typeof abilitySchema>;
+
+// Ability registry - master list of all abilities
+export const abilityRegistrySchema = z.object({
+  abilities: z.array(abilitySchema).default([]),
+  lastUpdated: z.string().optional(),  // ISO date string
+});
+
+export type AbilityRegistry = z.infer<typeof abilityRegistrySchema>;
+
+// Profile ability binding - which ability is active per keybind for this profile
+// When multiple abilities share the same key, profile picks ONE
+export const profileAbilityBindingSchema = z.object({
+  keybind: z.string(),                  // The key (e.g., "1", "F1")
+  abilityId: z.string(),                // ID of the ability active for this keybind
+  notes: z.string().optional(),         // Optional notes about this binding
+});
+
+export type ProfileAbilityBinding = z.infer<typeof profileAbilityBindingSchema>;
+
+// Helper function to normalize ability names (for matching aliases)
+export function normalizeAbilityName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]/g, '')  // Remove non-alphanumeric
+    .replace(/\s+/g, '');       // Remove spaces
+}
+
+// Find ability by name or alias
+export function findAbilityByName(registry: AbilityRegistry, searchName: string): Ability | undefined {
+  const normalized = normalizeAbilityName(searchName);
+  return registry.abilities.find(ability => {
+    if (normalizeAbilityName(ability.canonicalName) === normalized) return true;
+    return ability.aliases.some(alias => normalizeAbilityName(alias) === normalized);
+  });
+}
+
+// Get all abilities assigned to a specific key
+export function getAbilitiesForKey(registry: AbilityRegistry, key: string): Ability[] {
+  const normalizedKey = key.toLowerCase().trim();
+  return registry.abilities.filter(
+    ability => ability.assignedKey?.toLowerCase().trim() === normalizedKey
+  );
+}
 
 // Validation helper to check sequence constraints
 export function validateSequence(steps: SequenceStep[]): { valid: boolean; errors: string[] } {

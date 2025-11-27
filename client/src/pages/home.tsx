@@ -16,6 +16,7 @@ import { MappingDesigner } from "@/components/mapping-designer";
 import { ProfileExport } from "@/components/profile-export";
 import { ProfileImport } from "@/components/profile-import";
 import { SequenceBuilder } from "@/components/sequence-builder";
+import { AbilityRegistryComponent } from "@/components/ability-registry";
 import type { Profile, MacroProfile } from "@shared/schema";
 
 interface HomeProps {
@@ -149,6 +150,9 @@ export default function Home({
             </TabsTrigger>
             <TabsTrigger value="sequences" data-testid="tab-sequences">
               Sequence Builder
+            </TabsTrigger>
+            <TabsTrigger value="abilities" data-testid="tab-abilities">
+              Ability Registry
             </TabsTrigger>
           </TabsList>
 
@@ -298,6 +302,13 @@ export default function Home({
             <SequenceBuilder
               macroProfile={macroProfile}
               onUpdate={setMacroProfile}
+            />
+          </TabsContent>
+
+          <TabsContent value="abilities" data-testid="tab-content-abilities">
+            <AbilityRegistryComponent
+              currentProfile={currentProfile}
+              onProfileUpdate={onProfileUpdate}
             />
           </TabsContent>
         </Tabs>
