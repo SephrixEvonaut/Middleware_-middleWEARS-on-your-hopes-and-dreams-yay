@@ -36,6 +36,13 @@ Core features include:
   - Global timing defaults with "Apply to All" functionality
   - Validation prevents export of invalid sequences
   - Export to JSON format for Local Macro Agent
+- **Ability Registry**: Centralized management of game abilities with:
+  - Canonical name + aliases for input normalization (typos, nicknames → canonical name)
+  - Category and description fields for organization
+  - Keybind assignment with conflict detection (visual indicators when multiple abilities share the same key)
+  - Profile-level ability selection: each profile can pick which ability is "active" for each conflicting keybind
+  - Search and filter by name, alias, category, or assigned key
+  - Full CRUD operations via REST API (/api/abilities endpoints)
 
 The architecture is designed for 1:1 input/output ratio compliance, essential for anti-cheat systems. **Critical requirement fulfilled**: Modifiers operate at detection layer only - final game inputs never contain Alt/Shift/Ctrl to prevent interference with game keybinds.
 

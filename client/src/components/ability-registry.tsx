@@ -422,14 +422,14 @@ export function AbilityRegistryComponent({ currentProfile, onProfileUpdate }: Ab
               <div className="space-y-2">
                 <Label htmlFor="assignedKey">Assigned Key</Label>
                 <Select
-                  value={newAbility.assignedKey}
-                  onValueChange={(value) => setNewAbility({ ...newAbility, assignedKey: value })}
+                  value={newAbility.assignedKey || "none"}
+                  onValueChange={(value) => setNewAbility({ ...newAbility, assignedKey: value === "none" ? "" : value })}
                 >
                   <SelectTrigger data-testid="select-assigned-key">
                     <SelectValue placeholder="Select keybind" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No key assigned</SelectItem>
+                    <SelectItem value="none">No key assigned</SelectItem>
                     {AVAILABLE_KEYS.map((key) => (
                       <SelectItem key={key} value={key}>{key}</SelectItem>
                     ))}
